@@ -1,0 +1,13 @@
+github.com/johan-bolmsjo/errors v1.0.0 h1:wBdCTIRZ4GAssSIZB3FLHke9zGh3B9e5N8eMtn3urIc=
+github.com/johan-bolmsjo/errors v1.0.0/go.mod h1:KQ6z7wdIFfWRSsEyDlFtiGN4KKg2CNaS/wRDsIzvNj4=
+github.com/johan-bolmsjo/gods v1.0.0 h1:TIwZHfK7MPygxgX2BGIgrfP4dFb6oPFUTq2CwM0Fl30=
+github.com/johan-bolmsjo/gods v1.0.0/go.mod h1:yWMK4lXNKlpLjEmKkOTxpWGRD1yyEMVNhnvDuEN2akk=
+github.com/johan-bolmsjo/saft v1.0.2 h1:jKwtjm8+WFzifIu1kT8gCgFHBt/xBfL7OGwRyQmzaXk=
+github.com/johan-bolmsjo/saft v1.0.2/go.mod h1:EGncq2EdGcUoQqnfI4BftoOdIkVvGs9Alrc7qad6mcA=
+github.com/mattn/go-colorable v0.1.1 h1:G1f5SKeVxmagw/IyvzvtZE4Gybcc4Tr1tf7I8z0XgOg=
+github.com/mattn/go-colorable v0.1.1/go.mod h1:FuOcm+DKB9mbwrcAfNl7/TZVBZ6rcnceauSikq3lYCQ=
+github.com/mattn/go-isatty v0.0.5/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
+github.com/mattn/go-isatty v0.0.6 h1:SrwhHcpV4nWrMGdNcC2kXpMfcBVYGDuTArqyhocJgvA=
+github.com/mattn/go-isatty v0.0.6/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
+golang.org/x/sys v0.0.0-20190222072716-a9d3bda3a223 h1:DH4skfRX4EBpamg7iV4ZlCpblAHI6s6TDM39bFZumv8=
+golang.org/x/sys v0.0.0-20190222072716-a9d3bda3a223/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=

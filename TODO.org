@@ -1,0 +1,19 @@
+* Testing
+
+Testing is spotty.
+
+Check coverage by:
+
+: go test -coverprofile=coverage.out
+: go tool cover -html=coverage.out
+
+** TODO Negative Tests: Config File Syntax
+
+Most (all?) paths has been tested manually by introducing config file errors but
+there should be automatic tests for it.
+
+* Code
+
+** TODO Config file location is Linux centric
+
+Add support for other platforms (main.go)

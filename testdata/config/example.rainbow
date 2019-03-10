@@ -1,0 +1,110 @@
+// -*-Javascript-*-
+// This is not JSON but syntax is similar.
+//
+// Example rainbow filter.
+//
+// Syntax is described at:
+//   https://github.com/johan-bolmsjo/rainbow/blob/master/README.md
+//
+{
+    filter: {
+        name: logLevel
+
+        filter: {
+            regexp: `\d \[(EMERG|ALERT|CRIT)\]`
+            properties: {
+                1: {
+                    color:     white
+                    bgcolor:   red
+                    modifiers: bold
+                }
+            }
+        }
+        filter: {
+            regexp: `\d \[(ERROR)\]`
+            properties: {
+                1: {
+                    color:   white
+                    bgcolor: red
+                }
+            }
+        }
+        filter: {
+            regexp: `\d \[(WARN)\]`
+            properties: {
+                1: {
+                    color:   black
+                    bgcolor: yellow
+                }
+            }
+        }
+        // Color whole INFO logs gray as base color.
+        filter: {
+            name:   info
+            regexp: `^([\d-:\. ]+ \[INFO\].*)$`
+            properties: {
+                1: {
+                    color: iblack
+                }
+            }
+        }
+        // Color whole DEBUG logs cyan as base color.
+        filter: {
+            name:   debug
+            regexp: `^([\d-:\. ]+ \[DEBUG\].*)$`
+            properties: {
+                1: {
+                    color: cyan
+                }
+            }
+        }
+    }
+
+    filter: {
+        name:   time
+        regexp: `^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2})`
+    }
+    filter: {
+        name:       timeHighlight
+        regexpFrom: time
+        properties: {
+            1: {
+                modifiers: bold
+            }
+        }
+    }
+    filter: {
+        name:   domain
+        regexp: `\[\w+\]\s+(\w+):`
+        properties: {
+            1: {
+                modifiers: bold
+            }
+        }
+    }
+    filter: {
+        name:   variable
+        regexp: `([\w]+)=`
+        properties: {
+            1: {
+                modifiers: bold
+            }
+        }
+    }
+
+    apply: {
+        filters: [time logLevel]
+    }
+    apply: {
+        cond:    [and [filter-match? time]
+                      [not [equal? [filter-result time 0] [filter-result time 1]]]]
+        filters: timeHighlight
+    }
+    apply: {
+        cond:    [not [filter-match? logLevel/info logLevel/debug]]
+        filters: domain
+    }
+    apply: {
+        filters: variable
+    }
+}

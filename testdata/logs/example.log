@@ -1,0 +1,6 @@
+2018-08-25 12:55:33.123 [DEBUG]  Bob:   movement detected; sector=X2 count=3
+2018-08-25 12:55:33.125 [NOTICE] Bob:   informing Fred of movement; sector=X2
+2018-08-25 12:55:34.001 [INFO]   Fred:  dispatching drones; targetSector=X2
+2018-08-25 12:55:34.001 [CRIT]   Drone: damage detected; droneID=3 sensor=hull/3 action=returnHome
+2018-08-25 12:55:34.002 [EMERG]  Drone: damage detected; droneID=3 sensor=engine/1 action=selfDestruct
+2018-08-25 12:55:35.888 [WARN]   Fred:  lost drone; droneID=3 lastPosition=X2/3:7
