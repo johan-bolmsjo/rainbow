@@ -6,10 +6,6 @@ import (
 	"github.com/johan-bolmsjo/saft"
 )
 
-func assocHaveDuplicates() bool {
-	return false
-}
-
 func posErrorf(pos saft.LexPos, format string, a ...interface{}) error {
 	return fmt.Errorf(pos.String()+": "+format, a...)
 }
