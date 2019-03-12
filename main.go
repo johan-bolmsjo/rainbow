@@ -133,7 +133,7 @@ func briefUsage() {
 	errorStream.Write([]byte(`Usage:
 
     -help         Show help
-    -color        Force color output for non-TTY output
+    -color        Force color for non-TTY output
     -config FILE  Use config FILE
     CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow 
 

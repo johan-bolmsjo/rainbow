@@ -20,7 +20,8 @@ path to a config file can be specified using the `-config` flag.
 
 ### Command-line Flags
 
-    -h            Show help
+    -help         Show help
+    -color        Force color for non-TTY output
     -config FILE  Use config FILE
     CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow 
 
