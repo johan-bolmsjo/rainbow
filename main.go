@@ -38,7 +38,8 @@ func main() {
 		if configFile == "" {
 			configFile = s
 		} else {
-			usage(false)
+			briefUsage()
+			exitFail()
 		}
 	}
 
@@ -48,12 +49,20 @@ func main() {
 			setConfigFile(arg)
 			configState = false
 		} else {
-			switch arg {
-			case "-h":
-				usage(true)
-			case "-config":
-				configState = true
-			default:
+			if len(arg) > 0 && arg[0] == '-' {
+				switch arg {
+				case "-color":
+					colorOutputEnabled = true
+				case "-config":
+					configState = true
+				case "-help", "--help" /* GNU concession */ :
+					detailedUsage()
+					exitSuccess()
+				default:
+					detailedUsage()
+					exitFail()
+				}
+			} else {
 				configDir, err := userConfigDir()
 				if err != nil {
 					fatalf("unable to find user config directory: %s\n", err)
@@ -64,7 +73,8 @@ func main() {
 	}
 
 	if configState || configFile == "" {
-		usage(false)
+		briefUsage()
+		exitFail()
 	}
 
 	if cpuProfileEnabled {
@@ -73,6 +83,7 @@ func main() {
 			pprof.StartCPUProfile(f)
 			defer pprof.StopCPUProfile()
 		}
+		colorOutputEnabled = true
 	}
 
 	prog, err := loadProgram(configFile)
@@ -81,7 +92,7 @@ func main() {
 	}
 
 	encoder := textEncoderDummy
-	if colorOutputEnabled || cpuProfileEnabled {
+	if colorOutputEnabled {
 		outputStream = colorable.NewColorableStdout()
 		encoder = textEncoderANSI
 	}
@@ -109,28 +120,27 @@ func main() {
 	}
 }
 
-func usage(detail bool) {
-	preambleText := `Rainbow is a log file colorer that act as a stream processor. Match and action
+func detailedUsage() {
+	errorStream.Write([]byte(`Rainbow is a log file colorer that act as a stream processor. Match and action
 rules are applied according to configuration to each line read from stdin,
 outputting them to stdout.
 
-`
-	usageText := `Usage:
+`))
+	briefUsage()
+}
 
-    -h            Show help
+func briefUsage() {
+	errorStream.Write([]byte(`Usage:
+
+    -help         Show help
+    -color        Force color output for non-TTY output
     -config FILE  Use config FILE
     CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow 
 
 Example:
 
     rainbow config < logfile
-`
-	if detail {
-		errorStream.Write([]byte(preambleText + usageText))
-	} else {
-		errorStream.Write([]byte(usageText))
-	}
-	exitFail()
+`))
 }
 
 // TODO(jb): Support for other platforms than Linux.
@@ -159,6 +169,10 @@ func fatalf(format string, a ...interface{}) {
 func fatalln(a ...interface{}) {
 	fmt.Fprintln(errorStream, a...)
 	exitFail()
+}
+
+func exitSuccess() {
+	os.Exit(0)
 }
 
 func exitFail() {
