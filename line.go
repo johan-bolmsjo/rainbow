@@ -81,8 +81,10 @@ func (l *line) applyFilter(f *filter) {
 	}
 
 	applyToRegexpResult(r, func(group int, ival interval) {
-		if props, ok := f.props[group]; ok {
-			l.spliceProperties(ival, props)
+		if ival.beg != -1 {
+			if props, ok := f.props[group]; ok {
+				l.spliceProperties(ival, props)
+			}
 		}
 	})
 
@@ -97,12 +99,14 @@ func (l *line) insertSegment(s *lineSegment, nextTo *list.Elem) {
 
 // Splice line properties with line segments in tree.
 func (l *line) spliceProperties(ival interval, props properties) {
-	head := l.segmentTree.FindLe(&ival.beg).(*lineSegment)
+	found := l.segmentTree.FindLe(&ival.beg)
 
 	// There should always be a line segment in the tree that matches the
 	// less or equal search condition with the input interval because the tree
 	// is initially seeded with a segment of the whole input line.
-	assert(head != nil)
+	assert(found != nil)
+
+	head := found.(*lineSegment)
 
 	// For the same reason the found segment should always overlap with the input interval.
 	assert(head.ival.overlapsWith(ival))
