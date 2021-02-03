@@ -37,7 +37,7 @@ path to a config file can be specified using the `-config` flag.
 
 A rather silly example but gives an idea about what the tool can do.
 
-[Screenshot](screenshot.png)
+![Screenshot](screenshot.png)
 
 ## Configuration
 
