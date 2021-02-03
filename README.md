@@ -4,6 +4,11 @@ Rainbow is a log file colorer that act as a stream processor. Match and action
 rules are applied according to configuration to each line read from stdin,
 outputting them to stdout.
 
+One instance where this tool may be useful is when developing applications that
+log lots of data to traditional log files, maybe an embedded system. When you
+are looking for certain patterns, coloring may greatly speed up troubleshooting.
+A custom configuration is quickly created to troubleshoot particular issues.
+
 ## Design Goals
 
 * Low latency, output buffering is per line only.
@@ -29,6 +34,10 @@ path to a config file can be specified using the `-config` flag.
 
     go build
     ./rainbow -config testdata/config/example.rainbow < testdata/logs/example.log
+
+A rather silly example but gives an idea about what the tool can do.
+
+[Screenshot](screenshot.png)
 
 ## Configuration
 
@@ -161,6 +170,8 @@ the following elements its arguments.
 
 ### Example Config File
 
+Config file for coloring "testdata/config/example.rainbow".
+
     {
         filter: {
             name: logLevel
@@ -253,12 +264,3 @@ the following elements its arguments.
             filters: variable
         }
     }
-
-### Example Log File
-
-    2018-08-25 12:55:33.123 [DEBUG]  Bob:   movement detected; sector=X2 count=3
-    2018-08-25 12:55:33.125 [NOTICE] Bob:   informing Fred of movement; sector=X2
-    2018-08-25 12:55:34.001 [INFO]   Fred:  dispatching drones; targetSector=X2
-    2018-08-25 12:55:34.001 [CRIT]   Drone: damage detected; droneID=3 sensor=hull/3 action=returnHome
-    2018-08-25 12:55:34.002 [EMERG]  Drone: damage detected; droneID=3 sensor=engine/1 action=selfDestruct
-    2018-08-25 12:55:35.888 [WARN]   Fred:  lost drone; droneID=3 lastPosition=X2/3:7
