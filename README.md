@@ -13,7 +13,7 @@ A custom configuration is quickly created to troubleshoot particular issues.
 
 * Low latency, output buffering is per line only.
 * Good performance. Care has been taken to minimize memory allocations.
-  Currently most time is spent in GOs regexp package.
+  Currently most time is spent in Go's regexp package.
 * Easy to create customized log filters.
 
 ## Usage
@@ -203,8 +203,8 @@ Regexp match properties.
     bgcolor: COLOR
       Background color.
 
-    modifiers: MODIFIER | [MODIFIER ... ]
-      A single modifier or a list of modifiers.
+    modifiers: MODIFIER | [MODIFIER ...]
+      One or more modifiers.
 
 #### Parameter Values
 
@@ -231,7 +231,7 @@ The order in which filters are applied are specified by apply clauses.
       to be applied. See [Condition Expression].
 
     filters: FILTER | [FILTER ...]
-      A single filter or a list of filters to apply.
+      One ore more filters to apply if the condition evaluated to true.
 
 #### Condition Expression
 
