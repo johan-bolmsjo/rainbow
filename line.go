@@ -1,27 +1,24 @@
 package main
 
 import (
-	"github.com/johan-bolmsjo/gods/avltree"
-	"github.com/johan-bolmsjo/gods/list"
+	"github.com/johan-bolmsjo/gods/v4/avltree"
+	"github.com/johan-bolmsjo/gods/v4/list"
+	"github.com/johan-bolmsjo/gods/v4/math"
 	"io"
 )
 
 type line struct {
-	line        []byte        // shared: must not be modified
-	segmentTree *avltree.Tree // Tree of *lineSegment
-	segmentList list.Elem     // List of *lineSegment
+	text         []byte // shared data, must not be modified after initialization
+	segmentIndex *avltree.Tree[int, *lineSegment]
+	segmentList  lineSegment
 }
 
-type lineSegment struct {
-	elem  list.Elem // Linked list of segments in ascending order
+// Linked list of segments in ascending order
+type lineSegment = list.Node[lineSegmentData]
+
+type lineSegmentData struct {
 	ival  interval
 	props properties
-}
-
-// non-thread safe line segment pool to ease GC pressure.
-// lots of these objects may be created per line.
-type lineSegmentPool struct {
-	elems []*lineSegment
 }
 
 // Closed open interval (byte indices) of line slice
@@ -29,31 +26,47 @@ type interval struct {
 	beg, end int
 }
 
+// Non-thread safe line segment pool to ease GC pressure.
+// A line may have many segments.
+type lineSegmentPool struct {
+	arr []*lineSegment
+}
+
 var gLineSegmentPool lineSegmentPool
 
+func newLineSegment() *lineSegment {
+	return gLineSegmentPool.get()
+}
+
+func releaseLineSegment(s *lineSegment) {
+	gLineSegmentPool.put(s)
+}
+
+var gTreeNodePool = avltree.WithSyncPool[int, *lineSegment]()
+
 func newLine() *line {
-	l := new(line)
-	l.segmentTree = avltree.New(
-		func(d avltree.Data) avltree.Key { return &d.(*lineSegment).ival.beg },
-		func(lhs, rhs avltree.Key) int { return *lhs.(*int) - *rhs.(*int) },
-	)
-	l.segmentList.Init(nil)
+	l := &line{
+		segmentIndex: avltree.New(math.CompareOrdered[int], gTreeNodePool),
+	}
+	l.segmentList.InitLinks()
 	return l
 }
 
-func (l *line) init(line []byte) {
-	l.line = line
-	l.segmentTree.Clear(func(d avltree.Data) {
-		freeLineSegment(d.(*lineSegment))
-	})
-	l.segmentList.Init(nil)
+func (l *line) init(text []byte) {
+	l.text = text
+	for _, s := range l.segmentIndex.All() {
+		releaseLineSegment(s)
+	}
+	l.segmentIndex.Clear()
+	l.segmentList.InitLinks()
 
-	// Insert a root segment representing the whole line without any properties set. This makes
-	// it easier for the control codes encoder since there wont be any holes in the data. The
-	// drawback is that it will be more expensive to generate the line segment properties as
+	// Insert a root segment representing the whole line without any
+	// properties set. This makes it easier for the control codes encoder
+	// since there wont be any holes in the data. The drawback is that it
+	// will be more expensive to generate the line segment properties as
 	// more segments have to be split.
 	s := newLineSegment()
-	s.ival.end = len(line)
+	s.Value.ival.end = len(text)
 	l.insertSegment(s, &l.segmentList)
 }
 
@@ -75,9 +88,9 @@ func (l *line) applyProgram(prog *program) error {
 func (l *line) applyFilter(f *filter) {
 	var r [][]int
 	if f.regexp != nil {
-		r = f.state.match(l.line, f.regexp, true)
+		r = f.state.match(l.text, f.regexp, true)
 	} else if f.regexpFrom != nil {
-		r = f.regexpFrom.state.match(l.line, f.regexpFrom.regexp, false)
+		r = f.regexpFrom.state.match(l.text, f.regexpFrom.regexp, false)
 	}
 
 	applyToRegexpResult(r, func(group int, ival interval) {
@@ -92,72 +105,68 @@ func (l *line) applyFilter(f *filter) {
 	f.filters.apply(l.applyFilter)
 }
 
-func (l *line) insertSegment(s *lineSegment, nextTo *list.Elem) {
-	l.segmentTree.Insert(s)
-	nextTo.LinkNext(&s.elem)
+func (l *line) insertSegment(newSegment, prevSegment *lineSegment) {
+	l.segmentIndex.Add(newSegment.Value.ival.beg, newSegment)
+	prevSegment.LinkNext(newSegment)
 }
 
 // Splice line properties with line segments in tree.
 func (l *line) spliceProperties(ival interval, props properties) {
-	found := l.segmentTree.FindLe(&ival.beg)
+	_, head, found := l.segmentIndex.FindEqualOrLesser(ival.beg)
 
 	// There should always be a line segment in the tree that matches the
-	// less or equal search condition with the input interval because the tree
-	// is initially seeded with a segment of the whole input line.
-	assert(found != nil)
+	// less or equal search condition with the input interval because the
+	// tree is initially seeded with a segment of the whole input line.
+	assert(found)
 
-	head := found.(*lineSegment)
+	// For the same reason, the found segment should always overlap with the
+	// input interval.
+	assert(head.Value.ival.overlapsWith(ival))
 
-	// For the same reason the found segment should always overlap with the input interval.
-	assert(head.ival.overlapsWith(ival))
-
-	// The starting tree line segment may not align perfectly with the input interval to splice.
-	// Possibly split the head so that its start aligns with the input interval.
-	if head.ival.beg < ival.beg {
+	// The starting tree line segment may not align perfectly with the input
+	// interval to splice. Possibly split the head so that its start aligns
+	// with the input interval.
+	if head.Value.ival.beg < ival.beg {
 		tail := newLineSegment()
-		tail.ival.beg, tail.ival.end, tail.props = ival.beg, head.ival.end, head.props
-		head.ival.end = tail.ival.beg
-
-		head.elem.LinkNext(&tail.elem)
-		l.insertSegment(tail, &head.elem)
+		tail.Value.ival.beg, tail.Value.ival.end, tail.Value.props =
+			ival.beg, head.Value.ival.end, head.Value.props
+		head.Value.ival.end = tail.Value.ival.beg
+		l.insertSegment(tail, head)
 		head = tail
 	}
 
 	for {
-		if head.ival.end <= ival.end {
-			head.props.mergeWith(props)
-
-			ival.beg = head.ival.end
+		if head.Value.ival.end <= ival.end {
+			head.Value.props.mergeWith(props)
+			ival.beg = head.Value.ival.end
 			if ival.len() == 0 {
 				break
 			}
-
-			head = head.elem.Next().Value.(*lineSegment)
-			// The input interval should always overlap with what's already in the tree.
-			assert(ival.beg == head.ival.beg)
+			head = head.Next()
+			// The input interval should always overlap with what's already in
+			// the tree.
+			assert(ival.beg == head.Value.ival.beg)
 		} else {
 			tail := newLineSegment()
-			tail.ival.beg, tail.ival.end, tail.props = ival.end, head.ival.end, head.props
-			head.ival.end = tail.ival.beg
-
-			head.props.mergeWith(props)
-
-			l.insertSegment(tail, &head.elem)
+			tail.Value.ival.beg, tail.Value.ival.end, tail.Value.props =
+				ival.end, head.Value.ival.end, head.Value.props
+			head.Value.ival.end = tail.Value.ival.beg
+			head.Value.props.mergeWith(props)
+			l.insertSegment(tail, head)
 			break
 		}
 	}
 }
 
-// Compiler does not seem smart enough to avoid memory allocations when directly
+// The compiler does not seem smart enough to avoid memory allocations when directly
 // passing []byte("...") to a function accepting a byte slice.
 var bytesNewline = []byte("\n")
 
 func (l *line) output(w io.Writer, encoder textEncoder) error {
 	var err error
 
-	for e := l.segmentList.Next(); e != &l.segmentList; e = e.Next() {
-		s := e.Value.(*lineSegment)
-		if encoder, err = encoder(w, s.props, l.line[s.ival.beg:s.ival.end]); err != nil {
+	for s := l.segmentList.Next(); s != &l.segmentList; s = s.Next() {
+		if encoder, err = encoder(w, s.Value.props, l.text[s.Value.ival.beg:s.Value.ival.end]); err != nil {
 			return err
 		}
 	}
@@ -167,33 +176,19 @@ func (l *line) output(w io.Writer, encoder textEncoder) error {
 	return nil
 }
 
-func newLineSegment() *lineSegment {
-	return gLineSegmentPool.get()
-}
-
-func freeLineSegment(s *lineSegment) {
-	gLineSegmentPool.put(s)
-}
-
-func (s *lineSegment) clear() {
-	*s = lineSegment{}
-	s.elem.Init(s)
-}
-
 func (pool *lineSegmentPool) get() *lineSegment {
-	if n := len(pool.elems); n > 0 {
-		s := pool.elems[n-1]
-		pool.elems = pool.elems[:n-1]
+	if n := len(pool.arr); n > 0 {
+		s := pool.arr[n-1]
+		pool.arr = pool.arr[:n-1]
 		return s
 	}
-	s := new(lineSegment)
-	s.elem.Init(s)
-	return s
+	return list.New[lineSegmentData]()
 }
 
 func (pool *lineSegmentPool) put(s *lineSegment) {
-	s.clear()
-	pool.elems = append(pool.elems, s)
+	s.InitLinks()
+	s.Value = lineSegmentData{}
+	pool.arr = append(pool.arr, s)
 }
 
 func (ival interval) len() int {
