@@ -81,7 +81,11 @@ func (l *line) init(text []byte) {
 }
 
 // applyProgram applies the filters of prog according to its apply statements.
+// Filter state is reset after every line, also when a condition fails, so that
+// a later line can not observe cached match results.
 func (l *line) applyProgram(prog *program) error {
+	defer prog.globalFilterState.clear()
+
 	for _, stm := range prog.stms {
 		doApply, err := stm.cond.Evaluate()
 		if err != nil {
@@ -91,8 +95,6 @@ func (l *line) applyProgram(prog *program) error {
 		}
 		stm.filters.apply(l.applyFilter)
 	}
-
-	prog.globalFilterState.clear()
 	return nil
 }
 

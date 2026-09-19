@@ -98,3 +98,38 @@ func TestApplyConditionErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestApplyProgramClearsStateOnConditionError verifies that a condition error
+// does not leave a cached match result behind. A stale result would be reused
+// when the next, possibly shorter, line is processed.
+func TestApplyProgramClearsStateOnConditionError(t *testing.T) {
+	const config = `{
+    filter: { name: f regexp: (x+) properties: { 1: { color: red } } }
+    apply: { filters: f }
+    apply: { cond: [filter-result missing 0] filters: f }
+}`
+
+	prog, err := createProgram(strings.NewReader(config))
+	if err != nil {
+		t.Fatalf("createProgram: %v", err)
+	}
+
+	l := newLine()
+	l.init([]byte("xxxxxxxxxx"))
+	if err := l.applyProgram(prog); err == nil {
+		t.Fatal("expected an error for the first line")
+	}
+
+	for _, state := range prog.globalFilterState.l {
+		if state.hist[0].res != nil {
+			t.Fatalf("filter state not cleared after error: hist[0].res = %v", state.hist[0].res)
+		}
+	}
+
+	// The short line must not trip the splice assertions by reusing the match
+	// result cached for the long line.
+	l.init([]byte("a"))
+	if err := l.applyProgram(prog); err == nil {
+		t.Fatal("expected an error for the second line")
+	}
+}
