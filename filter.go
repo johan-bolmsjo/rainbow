@@ -85,7 +85,7 @@ func elementParseFilter(elem saft.Elem, prog *program) (*filter, error) {
 				return nil, formatErrorWithPosition(str.Pos(), "referenced filter %q does not exist", str.V)
 			}
 			if filter.regexpFrom.regexp == nil {
-				return nil, formatErrorWithPosition(str.Pos(), "referenced filter %q miss regexp", str.V)
+				return nil, formatErrorWithPosition(str.Pos(), "referenced filter %q has no regexp", str.V)
 			}
 
 		case parFilterProperties:

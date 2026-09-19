@@ -139,7 +139,7 @@ func processLogStream(reader io.Reader, writer *bufio.Writer, prog *program, enc
 
 // detailedUsage writes a full usage description to the error stream.
 func detailedUsage() {
-	errorStream.Write([]byte(`Rainbow is a log file colorer that act as a stream processor. Match and action
+	errorStream.Write([]byte(`Rainbow is a log file colorer that acts as a stream processor. Match and action
 rules are applied according to configuration to each line read from stdin,
 outputting them to stdout.
 

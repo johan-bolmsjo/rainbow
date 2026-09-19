@@ -259,5 +259,5 @@ the following elements its arguments.
       Evaluates to true if any of the listed filters regexp matched, else false.
 
     [filter-result filterName idx]
-      Get filter regexp match result as a list of strings of all matched regexp
-      groups; idx=0 is the current match, idx=1 is the previous match.
+      Get filter regexp match result of all matched regexp groups;
+      idx=0 is the current match, idx=1 is the previous match.

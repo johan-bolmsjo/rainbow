@@ -118,6 +118,26 @@ func TestApplyConditionRegexpFromMatchStatus(t *testing.T) {
 	}
 }
 
+// TestFilterResultNonNumericIndex verifies that a non-numeric match index
+// yields the same empty result as an out of range index, so that both can be
+// compared with equal?.
+func TestFilterResultNonNumericIndex(t *testing.T) {
+	const config = `{
+    filter: { name: base regexp: (x) }
+    filter: { name: highlight regexp: (x) properties: { 1: { color: red } } }
+    apply: { filters: base }
+    apply: {
+        cond: [equal? [filter-result base abc] [filter-result base 5]]
+        filters: highlight
+    }
+}`
+
+	got := applyConfiguration(t, config, "x").segmentContaining(t, "x")
+	if got.props.fgcolor != colorRed {
+		t.Errorf("segment %q has foreground color %s, want red", got.text, got.props.fgcolor)
+	}
+}
+
 // TestApplyConditionErrors verifies that errors raised while evaluating an
 // apply condition are reported when a line is processed.
 func TestApplyConditionErrors(t *testing.T) {
@@ -129,10 +149,10 @@ func TestApplyConditionErrors(t *testing.T) {
 		wantErr string
 	}{
 		{"filter-match missing filter", `{cond: [filter-match? missing] filters: f}}`, "missing filter"},
-		{"filter-match type error", `{cond: [filter-match? [filter-result f abc]] filters: f}}`, "type error"},
+		{"filter-match type error", `{cond: [filter-match? [not true]] filters: f}}`, "type error"},
 		{"filter-result argument count", `{cond: [filter-result f] filters: f}}`, "invalid number of arguments"},
 		{"filter-result missing filter", `{cond: [filter-result missing 0] filters: f}}`, "missing filter"},
-		{"filter-result type error", `{cond: [filter-result f [filter-result f abc]] filters: f}}`, "type error"},
+		{"filter-result type error", `{cond: [filter-result f [not true]] filters: f}}`, "argument 1 (Bool) is not String"},
 	}
 
 	for _, tt := range tests {

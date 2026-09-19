@@ -36,7 +36,7 @@ func TestCreateProgramErrors(t *testing.T) {
 		{"regexp compile error", `{filter: {name: f regexp: "("}}`, "error parsing regexp"},
 		{"regexpFrom not string", `{filter: {name: base regexp: (x)} filter: {name: d regexpFrom: []}}`, "expected string"},
 		{"regexpFrom missing filter", `{filter: {name: f regexpFrom: missing}}`, "does not exist"},
-		{"regexpFrom without regexp", `{filter: {name: base} filter: {name: d regexpFrom: base}}`, "miss regexp"},
+		{"regexpFrom without regexp", `{filter: {name: base} filter: {name: d regexpFrom: base}}`, "has no regexp"},
 		{"duplicate nested filter", `{filter: {name: p filter: {name: c regexp: (a)} filter: {name: c regexp: (b)}}}`, "duplicate filter"},
 		{"nested filter parse error", `{filter: {name: p filter: {name: c regexp: []}}}`, "expected string"},
 		{"unknown filter parameter", `{filter: {name: f regexp: (x) bogus: 1}}`, "unknown parameter"},

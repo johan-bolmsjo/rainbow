@@ -90,8 +90,8 @@ func createProgram(reader io.Reader) (*program, error) {
 		}
 		var strArgs [2]string
 		for i, arg := range args {
-			if arg, ok := arg.(igor.ObjectString); ok {
-				strArgs[i] = string(arg)
+			if str, ok := arg.(igor.ObjectString); ok {
+				strArgs[i] = string(str)
 			} else {
 				igor.Throw(igor.ExceptionTypeError(arg, i, igor.TypeString))
 			}
@@ -105,7 +105,7 @@ func createProgram(reader io.Reader) (*program, error) {
 		idx, err := strconv.Atoi(strArgs[1])
 		if err != nil {
 			// Maybe generate a user visible error if a proper numeric type is introduced.
-			return igor.ObjectStringList(nil)
+			return igor.ObjectString("")
 		}
 
 		return filter.state.valueMatchResult(idx)
