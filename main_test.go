@@ -2,9 +2,30 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"testing"
 )
+
+// failingReader returns its data and then fails with err.
+type failingReader struct {
+	data []byte
+	err  error
+}
+
+// Read copies the remaining data and reports the configured error once the
+// data is exhausted.
+func (r *failingReader) Read(p []byte) (int, error) {
+	if len(r.data) == 0 {
+		return 0, r.err
+	}
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	return n, nil
+}
 
 // testApplyConfigurationToLog applies a configuration to a log file and prints the
 // rendered segments using the test encoder.
@@ -109,4 +130,60 @@ func Example() {
 	// fg:none,bg:none,mod:[]                  {=X2/3:7}
 	// fg:none,bg:none,mod:[]                  {
 	// }
+}
+
+// TestProcessLogStream verifies that processLogStream reads and writes lines and
+// reports scanner and reader errors instead of truncating the input silently.
+func TestProcessLogStream(t *testing.T) {
+	const config = `{
+    filter: { name: f regexp: (x) }
+    apply: { filters: f }
+}`
+
+	newProgram := func(t *testing.T) *program {
+		t.Helper()
+		prog, err := createProgram(strings.NewReader(config))
+		if err != nil {
+			t.Fatalf("createProgram: %v", err)
+		}
+		return prog
+	}
+
+	t.Run("ordinary input", func(t *testing.T) {
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+		if err := processLogStream(strings.NewReader("hello\nworld\n"), writer, newProgram(t), textEncoderDummy); err != nil {
+			t.Fatalf("processLogStream: %v", err)
+		}
+		if got, want := buf.String(), "hello\nworld\n"; got != want {
+			t.Errorf("output = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("line too long", func(t *testing.T) {
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+		input := strings.Repeat("x", maxInputLineLength+1) + "\n"
+		err := processLogStream(strings.NewReader(input), writer, newProgram(t), textEncoderDummy)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if !strings.Contains(err.Error(), "failed to read input") {
+			t.Errorf("error = %q, want it to contain %q", err, "failed to read input")
+		}
+	})
+
+	t.Run("reader error", func(t *testing.T) {
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+		readErr := errors.New("read failure")
+		reader := &failingReader{data: []byte("line\n"), err: readErr}
+		err := processLogStream(reader, writer, newProgram(t), textEncoderDummy)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if !errors.Is(err, readErr) {
+			t.Errorf("error = %q, want it to wrap %q", err, readErr)
+		}
+	})
 }

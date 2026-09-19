@@ -99,26 +99,42 @@ func main() {
 	}
 
 	bufferedOutputStream := bufio.NewWriter(outputStream)
+	if err := processLogStream(os.Stdin, bufferedOutputStream, prog, encoder); err != nil {
+		fatalln(err.Error())
+	}
+}
 
+// maxInputLineLength is the largest input line accepted before the scanner
+// reports an error. It bounds the per-line memory use.
+const maxInputLineLength = 64 * 1024
+
+// processLogStream reads lines from reader, applies prog to every line and writes
+// the rendered result to writer using encoder. The input reader error is
+// reported after the scan loop ends.
+func processLogStream(reader io.Reader, writer *bufio.Writer, prog *program, encoder textEncoder) error {
 	line := newLine()
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, 0, maxInputLineLength), maxInputLineLength)
 	for scanner.Scan() {
-		// The line object and its state objects are reused beteween each line. The byte
-		// slice for the line content itself is uniquely allocated for each line as it's
+		// The line object and its state objects are reused between each line. The byte
+		// slice for the line content itself is uniquely allocated for each line as it is
 		// saved in a match history for match comparisons.
 		line.init(append([]byte(nil), scanner.Bytes()...))
 
-		if err = line.applyProgram(prog); err != nil {
-			fatalln(err.Error())
+		if err := line.applyProgram(prog); err != nil {
+			return err
 		}
-
-		if err = line.output(bufferedOutputStream, encoder); err == nil {
-			err = bufferedOutputStream.Flush()
+		if err := line.output(writer, encoder); err != nil {
+			return fmt.Errorf("failed to output line: %w", err)
 		}
-		if err != nil {
-			fatalf("failed to output line: %s\n", err)
+		if err := writer.Flush(); err != nil {
+			return fmt.Errorf("failed to output line: %w", err)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
+	}
+	return nil
 }
 
 // detailedUsage writes a full usage description to the error stream.
