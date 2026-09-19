@@ -99,6 +99,25 @@ func elemParseFilter(elem saft.Elem, prog *program) (*filter, error) {
 		}
 	}
 
+	// Validate that all property group numbers exist in the regexp.
+	// Parameters are order-independent, so validation is performed after
+	// parsing all of them.
+	if len(filter.props) > 0 {
+		re := filter.regexp
+		if re == nil && filter.regexpFrom != nil {
+			re = filter.regexpFrom.regexp
+		}
+		if re == nil {
+			return nil, posErrorf(assoc.Pos(), "properties set but filter has no regexp")
+		}
+		for group := range filter.props {
+			if group > re.NumSubexp() {
+				return nil, posErrorf(assoc.Pos(),
+					"invalid regexp group %d, regexp has %d group(s)", group, re.NumSubexp())
+			}
+		}
+	}
+
 	filter.state = prog.globalFilterState.allocState()
 	return &filter, nil
 }

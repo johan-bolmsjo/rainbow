@@ -74,10 +74,15 @@ func (fs *filterState) valueMatchResultN(n int) igor.ObjectString {
 	const groupSepMarker = 0
 
 	var sb strings.Builder
+	groupCount := 0
 	applyToRegexpResult(hist.res, func(_ int, ival interval) {
-		if sb.Len() > 0 {
+		// Write the group separator before every group except the first.
+		// Groups without a match contribute no data but still take part in
+		// the separation.
+		if groupCount > 0 {
 			sb.WriteByte(groupSepMarker)
 		}
+		groupCount++
 		if ival.beg != -1 {
 			sb.Write(hist.line[ival.beg:ival.end])
 		}

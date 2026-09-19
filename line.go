@@ -94,7 +94,10 @@ func (l *line) applyFilter(f *filter) {
 	}
 
 	applyToRegexpResult(r, func(group int, ival interval) {
-		if ival.beg != -1 {
+		// Only intervals that cover at least one byte can be colored.
+		// Intervals of groups that did not match and zero-length matches
+		// have nothing to color.
+		if ival.len() > 0 {
 			if props, ok := f.props[group]; ok {
 				l.spliceProperties(ival, props)
 			}
@@ -112,6 +115,11 @@ func (l *line) insertSegment(newSegment, prevSegment *lineSegment) {
 
 // Splice line properties with line segments in tree.
 func (l *line) spliceProperties(ival interval, props properties) {
+	// A zero-length interval has no characters to apply properties to.
+	if ival.len() <= 0 {
+		return
+	}
+
 	_, head, found := l.segmentIndex.FindEqualOrLesser(ival.beg)
 
 	// There should always be a line segment in the tree that matches the

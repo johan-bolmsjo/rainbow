@@ -61,7 +61,7 @@ var backgroundANSIColorCode = map[color]ansiterm.Code{
 // See https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 //
 // NOTE: Delta encoding of escape codes is currently not performed. Probably not
-//       worth the complexity to save a couple of bytes of output.
+// worth the complexity to save a couple of bytes of output.
 func textEncoderANSI(w io.Writer, props properties, text []byte) (textEncoder, error) {
 	var es errors.Sink
 
