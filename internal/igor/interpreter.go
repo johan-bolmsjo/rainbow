@@ -7,21 +7,21 @@ import (
 // Function is a function executable by the interpreter.
 type Function func(args []Object) Object
 
-// Interp is an interpreter instance.
-type Interp struct {
+// Interpreter is an interpreter instance.
+type Interpreter struct {
 	functions map[string]Function
 }
 
-// NewInterp returns a new interpreter.
-func NewInterp() *Interp {
-	t := Interp{
+// NewInterpreter returns a new interpreter.
+func NewInterpreter() *Interpreter {
+	t := Interpreter{
 		functions: map[string]Function{},
 	}
 
-	// Register generic logical functions that does not rely on external state.
+	// Register generic logical functions that do not rely on external state.
 	t.RegisterFunction("not", func(args []Object) Object {
 		if len(args) != 1 {
-			Throw(ExceptInvalidNumberOfArgs(len(args), "1"))
+			Throw(ExceptionInvalidNumberOfArguments(len(args), "1"))
 		}
 		return ObjectBool(!objectIsTrue(args[0]))
 	})
@@ -50,7 +50,7 @@ func NewInterp() *Interp {
 
 	t.RegisterFunction("equal?", func(args []Object) Object {
 		if len(args) != 2 {
-			Throw(ExceptInvalidNumberOfArgs(len(args), "2"))
+			Throw(ExceptionInvalidNumberOfArguments(len(args), "2"))
 		}
 		return objectIsEqual(args[0], args[1])
 	})
@@ -59,48 +59,50 @@ func NewInterp() *Interp {
 }
 
 // RegisterFunction registers a function executable by the interpreter.
-func (p *Interp) RegisterFunction(name string, f Function) {
+func (p *Interpreter) RegisterFunction(name string, f Function) {
 	p.functions[name] = f
 }
 
-func (p *Interp) getFunction(name string) Function {
+// getFunction returns the function registered under name, or nil.
+func (p *Interpreter) getFunction(name string) Function {
 	return p.functions[name]
 }
 
-// CompileCond compiles a condition.
-func (p *Interp) CompileCond(elem saft.Elem) (*Cond, error) {
+// CompileCondition compiles a condition.
+func (p *Interpreter) CompileCondition(elem saft.Elem) (*Condition, error) {
 	call, err := p.compile(elem)
 	if err != nil {
 		return nil, err
 	}
-	return &Cond{call: call}, nil
+	return &Condition{call: call}, nil
 }
 
-func (p *Interp) compile(elem saft.Elem) (*objectCall, error) {
+// compile compiles a function call expression.
+func (p *Interpreter) compile(elem saft.Elem) (*objectCall, error) {
 	list, err := elem.ExpectList()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(list.L) == 0 {
-		return nil, posErrorf(list.Pos(), "missing function name")
+		return nil, formatErrorWithPosition(list.Pos(), "missing function name")
 	}
 
 	str, ok := list.L[0].IsString()
 	if !ok {
-		return nil, posErrorf(list.L[0].Pos(), "expected function name")
+		return nil, formatErrorWithPosition(list.L[0].Pos(), "expected function name")
 	}
 
 	functionName := str.V
 
 	call := objectCall{
-		pos:  list.Pos(),
-		name: functionName,
-		fun:  p.getFunction(functionName),
+		position: list.Pos(),
+		name:     functionName,
+		fun:      p.getFunction(functionName),
 	}
 
 	if call.fun == nil {
-		return nil, posErrorf(list.L[0].Pos(), "unknown function %q", functionName)
+		return nil, formatErrorWithPosition(list.L[0].Pos(), "unknown function %q", functionName)
 	}
 
 	for _, arg := range list.L[1:] {
@@ -113,7 +115,7 @@ func (p *Interp) compile(elem saft.Elem) (*objectCall, error) {
 			}
 			call.args = append(call.args, call2)
 		} else {
-			return nil, posErrorf(arg.Pos(), "expected string or function call")
+			return nil, formatErrorWithPosition(arg.Pos(), "expected string or function call")
 		}
 	}
 

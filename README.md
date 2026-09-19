@@ -1,6 +1,6 @@
 # Rainbow
 
-Rainbow is a log file colorer that act as a stream processor. Match and action
+Rainbow is a log file colorer that acts as a stream processor. Match and action
 rules are applied according to configuration to each line read from stdin,
 outputting them to stdout.
 
@@ -11,7 +11,7 @@ A custom configuration is quickly created to troubleshoot particular issues.
 
 ## Design Goals
 
-* Low latency, output buffering is per line only.
+* Low latency; output buffering is per line only.
 * Good performance. Care has been taken to minimize memory allocations.
   Currently most time is spent in Go's regexp package.
 * Easy to create customized log filters.
@@ -28,7 +28,7 @@ path to a config file can be specified using the `-config` flag.
     -help         Show help
     -color        Force color for non-TTY output
     -config FILE  Use config FILE
-    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow 
+    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow
 
 ### Example Usage
 
@@ -43,7 +43,7 @@ A rather silly example that gives an idea about what the tool can do.
 
 The basic configuration primitives (strings, lists, association lists) are
 described at <https://github.com/johan-bolmsjo/saft/blob/master/README.md>.
-Details specific to rainbow follows.
+Details specific to rainbow follow.
 
 ### Example Configuration
 
@@ -147,7 +147,7 @@ An example configuration first, coloring "testdata/config/example.rainbow".
 `filter: { ... }`
 
 Filters specify line matching in the form of a regexp and what coloring to
-perform uppon match. When an executed filter matches a line the fact that it
+perform upon match. When an executed filter matches a line the fact that it
 matched and the result of the match is saved. The match status can be used to
 implement primitive flow control for what filters are to be applied.
 
@@ -189,7 +189,7 @@ referred to using '/' as path separator.
       from 1. Groups are counted from the left with each opening parenthesis.
 
     PROPERTIES:
-      See [Filter Properties]
+      See [Filter Properties].
 
 ### Filter Properties
 
@@ -222,23 +222,23 @@ Regexp match properties.
 
 `apply: { ... }`
 
-The order in which filters are applied are specified by apply clauses.
+The order in which filters are applied is specified by apply clauses.
 
 #### Parameters
 
     cond: EXPR
-      A lisp like expression that must evaluate to true for the apply clause
+      A Lisp-like expression that must evaluate to true for the apply clause
       to be applied. See [Condition Expression].
 
     filters: FILTER | [FILTER ...]
-      One ore more filters to apply if the condition evaluated to true.
+      One or more filters to apply if the condition evaluates to true.
 
 #### Condition Expression
 
-A couple of built in functions are available to build an expression that
+A couple of built-in functions are available to build an expression that
 evaluates to true or false.
 
-Functions are lisp like in that the first list element is the function and
+Functions are Lisp-like in that the first list element is the function and
 the following elements its arguments.
 
     [not arg]
@@ -260,4 +260,4 @@ the following elements its arguments.
 
     [filter-result filterName idx]
       Get filter regexp match result as a list of strings of all matched regexp
-      groups, idx=0 is current match, idx=1 is previous
+      groups; idx=0 is the current match, idx=1 is the previous match.

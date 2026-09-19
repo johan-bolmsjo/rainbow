@@ -8,6 +8,7 @@ func (obj ObjectStringList) Type() Type {
 	return TypeStringList
 }
 
+// equal reports whether lhs and rhs contain the same strings.
 func (lhs ObjectStringList) equal(rhs ObjectStringList) ObjectBool {
 	if len(rhs) != len(lhs) {
 		return false

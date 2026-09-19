@@ -6,7 +6,9 @@ import (
 	"os"
 )
 
-func testApplyConfigToLog(configPath, logPath string) {
+// testApplyConfigurationToLog applies a configuration to a log file and prints the
+// rendered segments using the test encoder.
+func testApplyConfigurationToLog(configPath, logPath string) {
 	prog, err := loadProgram(configPath)
 	if err != nil {
 		fmt.Printf("failed to read config: %s\n", err)
@@ -15,7 +17,7 @@ func testApplyConfigToLog(configPath, logPath string) {
 
 	log, err := os.Open(logPath)
 	if err != nil {
-		fmt.Printf("failed to log file: %s\n", err)
+		fmt.Printf("failed to open log file: %s\n", err)
 		return
 	}
 	defer log.Close()
@@ -23,7 +25,7 @@ func testApplyConfigToLog(configPath, logPath string) {
 	line := newLine()
 	scanner := bufio.NewScanner(log)
 	for scanner.Scan() {
-		// The line object and its state objects are reused beteween each line. The byte
+		// The line object and its state objects are reused between each line. The byte
 		// slice for the line content itself is uniquely allocated for each line as it's
 		// saved in a match history for match comparisons.
 		line.init(append([]byte(nil), scanner.Bytes()...))
@@ -40,8 +42,10 @@ func testApplyConfigToLog(configPath, logPath string) {
 	}
 }
 
+// Example applies the example configuration to the example log and prints the
+// rendered segments using the test encoder.
 func Example() {
-	testApplyConfigToLog("testdata/config/example.rainbow", "testdata/logs/example.log")
+	testApplyConfigurationToLog("testdata/config/example.rainbow", "testdata/logs/example.log")
 	//Output:
 	// fg:cyan,bg:none,mod:[]                  {2018-08-25 }
 	// fg:cyan,bg:none,mod:[bold]              {12:55:33}

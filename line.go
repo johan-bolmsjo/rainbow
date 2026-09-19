@@ -1,49 +1,57 @@
 package main
 
 import (
+	"io"
+
 	"github.com/johan-bolmsjo/gods/v4/avltree"
 	"github.com/johan-bolmsjo/gods/v4/list"
 	"github.com/johan-bolmsjo/gods/v4/math"
-	"io"
 )
 
+// line is an input line and the properties applied to its byte intervals. A
+// line is reused between input lines by calling init.
 type line struct {
 	text         []byte // shared data, must not be modified after initialization
 	segmentIndex *avltree.Tree[int, *lineSegment]
 	segmentList  lineSegment
 }
 
-// Linked list of segments in ascending order
+// lineSegment is a node in the linked list of line segments. The segments are
+// kept in ascending order.
 type lineSegment = list.Node[lineSegmentData]
 
+// lineSegmentData is the properties applied to an interval of a line.
 type lineSegmentData struct {
 	ival  interval
 	props properties
 }
 
-// Closed open interval (byte indices) of line slice
+// interval is a closed-open interval of byte indices into a line.
 type interval struct {
 	beg, end int
 }
 
-// Non-thread safe line segment pool to ease GC pressure.
-// A line may have many segments.
+// lineSegmentPool is a non-thread-safe pool of line segments that reduces
+// garbage collection pressure. A line may have many segments.
 type lineSegmentPool struct {
 	arr []*lineSegment
 }
 
 var gLineSegmentPool lineSegmentPool
 
+// newLineSegment returns a pooled line segment.
 func newLineSegment() *lineSegment {
 	return gLineSegmentPool.get()
 }
 
+// releaseLineSegment returns a line segment to the pool.
 func releaseLineSegment(s *lineSegment) {
 	gLineSegmentPool.put(s)
 }
 
 var gTreeNodePool = avltree.WithSyncPool[int, *lineSegment]()
 
+// newLine returns an empty line.
 func newLine() *line {
 	l := &line{
 		segmentIndex: avltree.New(math.CompareOrdered[int], gTreeNodePool),
@@ -52,6 +60,8 @@ func newLine() *line {
 	return l
 }
 
+// init initializes the line with text and a single segment covering it.
+// The caller must ensure that the text is not modified afterwards.
 func (l *line) init(text []byte) {
 	l.text = text
 	for _, s := range l.segmentIndex.All() {
@@ -61,18 +71,19 @@ func (l *line) init(text []byte) {
 	l.segmentList.InitLinks()
 
 	// Insert a root segment representing the whole line without any
-	// properties set. This makes it easier for the control codes encoder
-	// since there wont be any holes in the data. The drawback is that it
-	// will be more expensive to generate the line segment properties as
-	// more segments have to be split.
+	// properties set. This makes it easier for the text encoder since there
+	// won't be any holes in the data. The drawback is that it will be more
+	// expensive to generate the line segment properties as more segments
+	// have to be split.
 	s := newLineSegment()
 	s.Value.ival.end = len(text)
 	l.insertSegment(s, &l.segmentList)
 }
 
+// applyProgram applies the filters of prog according to its apply statements.
 func (l *line) applyProgram(prog *program) error {
 	for _, stm := range prog.stms {
-		doApply, err := stm.cond.Eval()
+		doApply, err := stm.cond.Evaluate()
 		if err != nil {
 			return decorateErrorWithSource(err, prog.name)
 		} else if !doApply {
@@ -85,6 +96,8 @@ func (l *line) applyProgram(prog *program) error {
 	return nil
 }
 
+// applyFilter matches f against the line, splices the properties of matched
+// groups into the line and applies nested filters.
 func (l *line) applyFilter(f *filter) {
 	var r [][]int
 	if f.regexp != nil {
@@ -108,12 +121,15 @@ func (l *line) applyFilter(f *filter) {
 	f.filters.apply(l.applyFilter)
 }
 
+// insertSegment inserts newSegment into the index and the linked list after
+// prevSegment.
 func (l *line) insertSegment(newSegment, prevSegment *lineSegment) {
 	l.segmentIndex.Add(newSegment.Value.ival.beg, newSegment)
 	prevSegment.LinkNext(newSegment)
 }
 
-// Splice line properties with line segments in tree.
+// spliceProperties merges the properties into every line segment overlapping
+// the interval, splitting segments at the interval boundaries as needed.
 func (l *line) spliceProperties(ival interval, props properties) {
 	// A zero-length interval has no characters to apply properties to.
 	if ival.len() <= 0 {
@@ -166,10 +182,10 @@ func (l *line) spliceProperties(ival interval, props properties) {
 	}
 }
 
-// The compiler does not seem smart enough to avoid memory allocations when directly
-// passing []byte("...") to a function accepting a byte slice.
+// bytesNewline is shared to avoid a byte slice allocation for every line.
 var bytesNewline = []byte("\n")
 
+// output writes each line segment through the encoder followed by a newline.
 func (l *line) output(w io.Writer, encoder textEncoder) error {
 	var err error
 
@@ -184,6 +200,7 @@ func (l *line) output(w io.Writer, encoder textEncoder) error {
 	return nil
 }
 
+// get returns a line segment from the pool or a new one if the pool is empty.
 func (pool *lineSegmentPool) get() *lineSegment {
 	if n := len(pool.arr); n > 0 {
 		s := pool.arr[n-1]
@@ -193,16 +210,19 @@ func (pool *lineSegmentPool) get() *lineSegment {
 	return list.New[lineSegmentData]()
 }
 
+// put returns a line segment to the pool after clearing its state.
 func (pool *lineSegmentPool) put(s *lineSegment) {
 	s.InitLinks()
 	s.Value = lineSegmentData{}
 	pool.arr = append(pool.arr, s)
 }
 
+// len returns the number of bytes covered by the interval.
 func (ival interval) len() int {
 	return ival.end - ival.beg
 }
 
+// overlapsWith reports whether the interval overlaps other.
 func (ival interval) overlapsWith(other interval) bool {
 	return ival.beg < other.end && ival.end > other.beg
 }

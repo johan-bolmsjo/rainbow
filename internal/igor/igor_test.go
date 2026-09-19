@@ -9,8 +9,8 @@ import (
 	"github.com/johan-bolmsjo/saft"
 )
 
-// compileCond parses and compiles a condition expression from source.
-func compileCond(t *testing.T, source string) *Cond {
+// compileCondition parses and compiles a condition expression from source.
+func compileCondition(t *testing.T, source string) *Condition {
 	t.Helper()
 
 	elems, err := saft.Parse(strings.NewReader(source))
@@ -21,16 +21,16 @@ func compileCond(t *testing.T, source string) *Cond {
 		t.Fatalf("saft.Parse(%q) returned %d elements, want 1", source, len(elems))
 	}
 
-	cond, err := NewInterp().CompileCond(elems[0])
+	cond, err := NewInterpreter().CompileCondition(elems[0])
 	if err != nil {
-		t.Fatalf("CompileCond(%q): %v", source, err)
+		t.Fatalf("CompileCondition(%q): %v", source, err)
 	}
 	return cond
 }
 
-// TestCondEval verifies evaluation of the built in logical and comparison
+// TestConditionEvaluate verifies evaluation of the built in logical and comparison
 // functions, including short circuit behavior.
-func TestCondEval(t *testing.T) {
+func TestConditionEvaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
@@ -50,32 +50,32 @@ func TestCondEval(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := compileCond(t, tt.source).Eval()
+			got, err := compileCondition(t, tt.source).Evaluate()
 			if err != nil {
-				t.Fatalf("Eval: %v", err)
+				t.Fatalf("Evaluate: %v", err)
 			}
 			if got != tt.want {
-				t.Errorf("Eval(%q) = %v, want %v", tt.source, got, tt.want)
+				t.Errorf("Evaluate(%q) = %v, want %v", tt.source, got, tt.want)
 			}
 		})
 	}
 }
 
-// TestCondNilEval verifies that a missing condition evaluates to true.
-func TestCondNilEval(t *testing.T) {
-	var cond *Cond
-	got, err := cond.Eval()
+// TestConditionNilEvaluate verifies that a missing condition evaluates to true.
+func TestConditionNilEvaluate(t *testing.T) {
+	var cond *Condition
+	got, err := cond.Evaluate()
 	if err != nil {
-		t.Fatalf("Eval: %v", err)
+		t.Fatalf("Evaluate: %v", err)
 	}
 	if !got {
-		t.Error("Eval() = false, want true")
+		t.Error("Evaluate() = false, want true")
 	}
 }
 
-// TestCompileCondErrors verifies that invalid condition expressions are
+// TestCompileConditionErrors verifies that invalid condition expressions are
 // rejected when compiled.
-func TestCompileCondErrors(t *testing.T) {
+func TestCompileConditionErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		source  string
@@ -95,7 +95,7 @@ func TestCompileCondErrors(t *testing.T) {
 			if err != nil {
 				t.Fatalf("saft.Parse: %v", err)
 			}
-			if _, err = NewInterp().CompileCond(elems[0]); err == nil {
+			if _, err = NewInterpreter().CompileCondition(elems[0]); err == nil {
 				t.Fatal("expected an error")
 			} else if !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("error = %q, want it to contain %q", err, tt.wantErr)
@@ -104,9 +104,9 @@ func TestCompileCondErrors(t *testing.T) {
 	}
 }
 
-// TestCondEvalErrors verifies that argument errors are reported when
+// TestConditionEvaluateErrors verifies that argument errors are reported when
 // evaluating a condition.
-func TestCondEvalErrors(t *testing.T) {
+func TestConditionEvaluateErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		source  string
@@ -120,7 +120,7 @@ func TestCondEvalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := compileCond(t, tt.source).Eval()
+			_, err := compileCondition(t, tt.source).Evaluate()
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -236,22 +236,22 @@ func TestExceptionErrors(t *testing.T) {
 	}{
 		{
 			"argument count with expectation",
-			ExceptInvalidNumberOfArgs(1, "2").Error(),
+			ExceptionInvalidNumberOfArguments(1, "2").Error(),
 			"invalid number of arguments: 1, expected: 2",
 		},
 		{
 			"argument count without expectation",
-			ExceptInvalidNumberOfArgs(1, "").Error(),
+			ExceptionInvalidNumberOfArguments(1, "").Error(),
 			"invalid number of arguments: 1",
 		},
 		{
 			"invalid argument",
-			ExceptInvalidArgument(0, "missing").Error(),
+			ExceptionInvalidArgument(0, "missing").Error(),
 			"invalid argument: 0, missing",
 		},
 		{
 			"type error",
-			ExceptTypeError(ObjectString("x"), 1, TypeBool, TypeString).Error(),
+			ExceptionTypeError(ObjectString("x"), 1, TypeBool, TypeString).Error(),
 			"type error: argument 1 (String) is not Bool|String",
 		},
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// color identifies a terminal foreground or background color.
 type color uint8
 
 const (
@@ -26,6 +27,7 @@ const (
 	colorIWhite
 )
 
+// itoaColor maps a color to its configuration name.
 var itoaColor = map[color]string{
 	colorNone:     "none",
 	colorBlack:    "black",
@@ -46,6 +48,7 @@ var itoaColor = map[color]string{
 	colorIWhite:   "iwhite",
 }
 
+// atoiColor maps a configuration name to a color.
 var atoiColor = func() map[string]color {
 	m := map[string]color{}
 	for k, v := range itoaColor {
@@ -54,6 +57,7 @@ var atoiColor = func() map[string]color {
 	return m
 }()
 
+// parseColor returns the color with the given configuration name.
 func parseColor(s string) (color, error) {
 	if c, ok := atoiColor[s]; ok {
 		return c, nil
@@ -61,6 +65,7 @@ func parseColor(s string) (color, error) {
 	return colorNone, fmt.Errorf("unknown color %q", s)
 }
 
+// String returns the configuration name of the color.
 func (c color) String() string {
 	return itoaColor[c]
 }

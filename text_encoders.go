@@ -2,14 +2,15 @@ package main
 
 import (
 	"bytes"
+	"io"
+
 	"github.com/johan-bolmsjo/errors"
 	"github.com/johan-bolmsjo/rainbow/internal/ansiterm"
-	"io"
 )
 
-// textEncoder writes escape codes to w according to props.
+// textEncoder writes escape codes to w according to the properties.
 // The function is used to start encoding escape codes for a line. It may return
-// a new function which will be used used to encode the next set of properties.
+// a new function which will be used to encode the next set of properties.
 // This way it's possible to implement delta encoding schemes.
 type textEncoder func(w io.Writer, props properties, text []byte) (textEncoder, error)
 
@@ -19,6 +20,7 @@ func textEncoderDummy(w io.Writer, props properties, text []byte) (textEncoder, 
 	return textEncoderDummy, err
 }
 
+// foregroundANSIColorCode maps a color to its ANSI foreground color code.
 var foregroundANSIColorCode = map[color]ansiterm.Code{
 	colorBlack:    ansiterm.CodeFGBlack,
 	colorRed:      ansiterm.CodeFGRed,
@@ -38,6 +40,7 @@ var foregroundANSIColorCode = map[color]ansiterm.Code{
 	colorIWhite:   ansiterm.CodeFGIWhite,
 }
 
+// backgroundANSIColorCode maps a color to its ANSI background color code.
 var backgroundANSIColorCode = map[color]ansiterm.Code{
 	colorBlack:    ansiterm.CodeBGBlack,
 	colorRed:      ansiterm.CodeBGRed,
@@ -57,18 +60,22 @@ var backgroundANSIColorCode = map[color]ansiterm.Code{
 	colorIWhite:   ansiterm.CodeBGIWhite,
 }
 
-// textEncoderANSI emits ANSI terminal escape codes.
-// See https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+// textEncoderANSI emits ANSI terminal escape codes for the properties of each
+// line segment. It resets the terminal after any segment with properties.
 //
-// NOTE: Delta encoding of escape codes is currently not performed. Probably not
-// worth the complexity to save a couple of bytes of output.
+// Delta encoding of escape codes is not performed; it would save a couple of
+// bytes of output at the cost of added complexity.
 func textEncoderANSI(w io.Writer, props properties, text []byte) (textEncoder, error) {
 	var es errors.Sink
 
 	doWriteCodes := props != properties{}
 
 	if doWriteCodes {
-		var codeBuf [10]ansiterm.Code
+		// maxCodesPerSegment is the maximum number of codes emitted for a line
+		// segment: one per modifier plus a foreground and a background color.
+		const maxCodesPerSegment = int(lastModifier) + 1 + 2
+
+		var codeBuf [maxCodesPerSegment]ansiterm.Code
 		codes := codeBuf[:0]
 
 		props.modifiers.foreach(func(m modifier) {
@@ -128,7 +135,11 @@ func textEncoderTest(w io.Writer, props properties, text []byte) (textEncoder, e
 	})
 	bb.WriteString("]")
 
-	if pad := 40 - bb.Len(); pad > 0 {
+	// testEncoderColumnWidth is the column width used to align the rendered text of
+	// the test encoder.
+	const testEncoderColumnWidth = 40
+
+	if pad := testEncoderColumnWidth - bb.Len(); pad > 0 {
 		bb.Write(bytes.Repeat([]byte(" "), pad))
 	}
 

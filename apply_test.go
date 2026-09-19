@@ -14,7 +14,7 @@ func TestApplyFilters(t *testing.T) {
     apply: { filters: [first second] }
 }`
 
-	got := applyConfig(t, config, "foo").segmentContaining(t, "foo")
+	got := applyConfiguration(t, config, "foo").segmentContaining(t, "foo")
 	if want := newProperties(colorRed, colorBlue); got.props != want {
 		t.Errorf("segment %q properties = %+v, want %+v", got.text, got.props, want)
 	}
@@ -54,7 +54,7 @@ func TestApplyCondition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := applyConfig(t, config, tt.lines...).segmentContaining(t, tt.text)
+			got := applyConfiguration(t, config, tt.lines...).segmentContaining(t, tt.text)
 			if got.props.fgcolor != tt.want {
 				t.Errorf("segment %q has foreground color %s, want %s",
 					got.text, got.props.fgcolor, tt.want)

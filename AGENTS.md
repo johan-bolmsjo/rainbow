@@ -1,19 +1,23 @@
 # Rainbow
 
-Rainbow is a log file colorer that act as a stream processor.
+Rainbow is a log file colorer that acts as a stream processor.
 See README.md for an overview.
 
 ## Rules of Engagement
 
-### Naming
+### Naming rules
 
 - Never abbreviate named (not anonymous) types or functions.
+
+### Scoping rules
+
+- Use the minimum scope for definitions based on their use.
 
 ### Comment style
 
 - Never use abbreviations except exempted ones.
-- Use Go's comment style for types which leads with the function name or type that it applies to.
-- Document the current code behavior:
+- Use Go's comment style for types, which leads with the name of the function or type it applies to.
+- Document the current code behavior.
 - Use self contained comments: never refer to external documents or task instructions in comments.
 - Never mention historical details or circumstances.
 
@@ -26,7 +30,7 @@ See README.md for an overview.
 ### Design methodologies
 
 - Use consistent naming of functions, types and variables.
-- Apply separation of concern: Consider the responsibilities of code modules for clear interfaces.
+- Apply separation of concerns: Consider the responsibilities of code modules for clear interfaces.
 - Keep code "DRY": Avoid excessive copy paste.
 - Avoid inline magic constants: give constant names to provide context.
 

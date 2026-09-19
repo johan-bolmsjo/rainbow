@@ -5,6 +5,7 @@ type Object interface {
 	Type() Type
 }
 
+// objectIsEqual reports whether lhs and rhs are considered equal.
 func objectIsEqual(lhs, rhs Object) ObjectBool {
 	switch lhs := lhs.(type) {
 	case ObjectBool:
@@ -23,6 +24,7 @@ func objectIsEqual(lhs, rhs Object) ObjectBool {
 	return false
 }
 
+// objectIsTrue reports whether obj is considered true.
 func objectIsTrue(obj Object) ObjectBool {
 	switch obj := obj.(type) {
 	case ObjectNone:

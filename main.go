@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/mattn/go-colorable"
-	"github.com/mattn/go-isatty"
 	"io"
 	"os"
 	"runtime"
 	"runtime/pprof"
+
+	"github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
 )
 
 var (
@@ -29,8 +30,8 @@ func init() {
 }
 
 func main() {
-	// There is some impedance mismatch between the stdlib flag package and my brain.
-	// Parse flags using custom code as there are so few of them.
+	// Parse flags with custom code instead of the flag package since there
+	// are so few of them.
 
 	var configFile string
 
@@ -63,7 +64,7 @@ func main() {
 					exitFail()
 				}
 			} else {
-				configDir, err := userConfigDir()
+				configDir, err := userConfigurationDirectory()
 				if err != nil {
 					fatalf("unable to find user config directory: %s\n", err)
 				}
@@ -120,6 +121,7 @@ func main() {
 	}
 }
 
+// detailedUsage writes a full usage description to the error stream.
 func detailedUsage() {
 	errorStream.Write([]byte(`Rainbow is a log file colorer that act as a stream processor. Match and action
 rules are applied according to configuration to each line read from stdin,
@@ -129,13 +131,14 @@ outputting them to stdout.
 	briefUsage()
 }
 
+// briefUsage writes a short usage description to the error stream.
 func briefUsage() {
 	errorStream.Write([]byte(`Usage:
 
     -help         Show help
     -color        Force color for non-TTY output
     -config FILE  Use config FILE
-    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow 
+    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow
 
 Example:
 
@@ -143,11 +146,11 @@ Example:
 `))
 }
 
-// TODO(jb): Support for other platforms than Linux.
+// userConfigurationDirectory returns the directory that holds user configuration files.
 //
-// This is currently Linix centric.
-// There is the os.UserCacheDir() but I don't think that is the correct place to put user config files.
-func userConfigDir() (string, error) {
+// TODO(jb): Support for other platforms than Linux. The lookup is Linux
+// specific and assumes that HOME points at the user's home directory.
+func userConfigurationDirectory() (string, error) {
 	var dir string
 
 	switch runtime.GOOS {
@@ -161,20 +164,24 @@ func userConfigDir() (string, error) {
 	return dir, nil
 }
 
+// fatalf writes a formatted error to the error stream and exits with failure.
 func fatalf(format string, a ...interface{}) {
 	fmt.Fprintf(errorStream, format, a...)
 	exitFail()
 }
 
+// fatalln writes an error to the error stream and exits with failure.
 func fatalln(a ...interface{}) {
 	fmt.Fprintln(errorStream, a...)
 	exitFail()
 }
 
+// exitSuccess exits the process with a success status.
 func exitSuccess() {
 	os.Exit(0)
 }
 
+// exitFail exits the process with a failure status.
 func exitFail() {
 	os.Exit(1)
 }

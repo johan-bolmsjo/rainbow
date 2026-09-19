@@ -86,9 +86,9 @@ func applyProgramLines(t *testing.T, prog *program, lines ...string) renderedLin
 	return renderedLine{text: string(last.text), segments: segments}
 }
 
-// applyConfig parses a configuration and applies it to lines in order,
+// applyConfiguration parses a configuration and applies it to lines in order,
 // returning the rendered result of the last line.
-func applyConfig(t *testing.T, config string, lines ...string) renderedLine {
+func applyConfiguration(t *testing.T, config string, lines ...string) renderedLine {
 	t.Helper()
 	prog, err := createProgram(strings.NewReader(config))
 	if err != nil {
@@ -124,7 +124,7 @@ func TestFilterProperties(t *testing.T) {
     apply: { filters: test }
 }`, tt.properties)
 
-			got := applyConfig(t, config, "a match here").segmentContaining(t, "match")
+			got := applyConfiguration(t, config, "a match here").segmentContaining(t, "match")
 			if got.props != tt.want {
 				t.Errorf("match segment properties = %+v, want %+v", got.props, tt.want)
 			}
@@ -144,7 +144,7 @@ func TestFilterPropertyGroupTargeting(t *testing.T) {
     apply: { filters: test }
 }`, "`(ERROR|WARN): (\\w+)`")
 
-	line := applyConfig(t, config, "ERROR: failure")
+	line := applyConfiguration(t, config, "ERROR: failure")
 
 	if got := line.segmentContaining(t, "ERROR"); got.props.fgcolor != colorNone {
 		t.Errorf("group 1 segment %q has foreground color %s, want none", got.text, got.props.fgcolor)
@@ -171,7 +171,7 @@ func TestNestedFilters(t *testing.T) {
     apply: { filters: parent }
 }`
 
-	line := applyConfig(t, config, "parent and child")
+	line := applyConfiguration(t, config, "parent and child")
 
 	if got := line.segmentContaining(t, "parent"); got.props.fgcolor != colorRed {
 		t.Errorf("parent segment %q has foreground color %s, want red", got.text, got.props.fgcolor)
@@ -232,7 +232,7 @@ func TestFilterNameReference(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := applyConfig(t, tt.config, tt.line).segmentContaining(t, tt.text)
+			got := applyConfiguration(t, tt.config, tt.line).segmentContaining(t, tt.text)
 			if got.props.fgcolor != tt.want {
 				t.Errorf("segment %q has foreground color %s, want %s",
 					got.text, got.props.fgcolor, tt.want)
@@ -254,7 +254,7 @@ func TestRegexpFrom(t *testing.T) {
     apply: { filters: [base derived] }
 }`
 
-	line := applyConfig(t, config, "foo bar foo")
+	line := applyConfiguration(t, config, "foo bar foo")
 	if got := line.segmentContaining(t, "foo"); got.props.fgcolor != colorRed {
 		t.Errorf("matched segment %q has foreground color %s, want red", got.text, got.props.fgcolor)
 	}
@@ -272,7 +272,7 @@ func TestFilterOverlappingIntervals(t *testing.T) {
     apply: { filters: [first second] }
 }`
 
-	line := applyConfig(t, config, "abcd")
+	line := applyConfiguration(t, config, "abcd")
 
 	if got := line.segmentContaining(t, "a"); got.props != newProperties(colorRed, colorBlue) {
 		t.Errorf("segment %q properties = %+v, want red foreground and blue background",

@@ -2,28 +2,33 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/johan-bolmsjo/errors"
 	"github.com/johan-bolmsjo/saft"
 )
 
-func posErrorf(pos saft.LexPos, format string, a ...interface{}) error {
-	return fmt.Errorf(pos.String()+": "+format, a...)
+// formatErrorWithPosition returns an error prefixed with the source position.
+func formatErrorWithPosition(position saft.LexPos, format string, a ...interface{}) error {
+	return fmt.Errorf(position.String()+": "+format, a...)
 }
 
-func posWrapError(err error, pos saft.LexPos) error {
-	return errors.Wrap(err, pos.String())
+// wrapErrorWithPosition wraps err with the source position.
+func wrapErrorWithPosition(err error, position saft.LexPos) error {
+	return errors.Wrap(err, position.String())
 }
 
-func assocCheckDuplicates(assoc *saft.Assoc, keys ...string) error {
+// associationCheckDuplicates reports an error if any of the keys occurs more
+// than once in the association list.
+func associationCheckDuplicates(association *saft.Assoc, keys ...string) error {
 	checkDup := map[string]bool{}
 	for _, v := range keys {
 		checkDup[v] = false
 	}
 
-	for _, p := range assoc.L {
+	for _, p := range association.L {
 		if seen, check := checkDup[p.K.V]; check {
 			if seen {
-				return posErrorf(p.K.Pos(), "duplicate parameter %q", p.K.V)
+				return formatErrorWithPosition(p.K.Pos(), "duplicate parameter %q", p.K.V)
 			}
 			checkDup[p.K.V] = true
 		}
@@ -31,17 +36,19 @@ func assocCheckDuplicates(assoc *saft.Assoc, keys ...string) error {
 	return nil
 }
 
-func assocCheckExclusive(assoc *saft.Assoc, keys ...string) error {
+// associationCheckExclusive reports an error if more than one of the keys is
+// present in the association list.
+func associationCheckExclusive(association *saft.Assoc, keys ...string) error {
 	checkExcl := map[string]bool{}
 	for _, v := range keys {
 		checkExcl[v] = true
 	}
 	var seen string
 
-	for _, p := range assoc.L {
+	for _, p := range association.L {
 		if checkExcl[p.K.V] {
 			if len(seen) > 0 {
-				return posErrorf(p.K.Pos(), "parameters %q and %q are mutually exclusive", p.K.V, seen)
+				return formatErrorWithPosition(p.K.Pos(), "parameters %q and %q are mutually exclusive", p.K.V, seen)
 			}
 			seen = p.K.V
 		}
@@ -49,7 +56,9 @@ func assocCheckExclusive(assoc *saft.Assoc, keys ...string) error {
 	return nil
 }
 
-func elemExpectString(elem saft.Elem, param string) (*saft.String, error) {
+// elementExpectString expects element to be a string and decorates any error
+// with the parameter name.
+func elementExpectString(elem saft.Elem, param string) (*saft.String, error) {
 	str, err := elem.ExpectString()
 	if err != nil {
 		return nil, fmt.Errorf("%s when parsing %q", err, param)
@@ -57,7 +66,10 @@ func elemExpectString(elem saft.Elem, param string) (*saft.String, error) {
 	return str, nil
 }
 
-func elemExpectListOfString(elem saft.Elem, param string) (list []*saft.String, err error) {
+// elementExpectListOfString expects element to be a string or a list of
+// strings and decorates any error with the parameter name. A single string is
+// returned as a one element list.
+func elementExpectListOfString(elem saft.Elem, param string) (list []*saft.String, err error) {
 	if str, ok := elem.IsString(); ok {
 		return []*saft.String{str}, nil
 	}
@@ -75,22 +87,28 @@ func elemExpectListOfString(elem saft.Elem, param string) (list []*saft.String, 
 	return list, nil
 }
 
-func elemExpectAssoc(elem saft.Elem, param string) (*saft.Assoc, error) {
-	assoc, err := elem.ExpectAssoc()
+// elementExpectAssociation expects element to be an association list and
+// decorates any error with the parameter name.
+func elementExpectAssociation(elem saft.Elem, param string) (*saft.Assoc, error) {
+	association, err := elem.ExpectAssoc()
 	if err != nil {
 		return nil, fmt.Errorf("%s when parsing %q", err, param)
 	}
-	return assoc, nil
+	return association, nil
 }
 
+// unknownParameterError returns an error for an unknown association parameter.
 func unknownParameterError(pair *saft.Pair) error {
-	return posErrorf(pair.K.Pos(), "unknown parameter %q", pair.K.V)
+	return formatErrorWithPosition(pair.K.Pos(), "unknown parameter %q", pair.K.V)
 }
 
-func missingParameterError(assoc *saft.Assoc, param string) error {
-	return posErrorf(assoc.Pos(), "missing parameter %q", param)
+// missingParameterError returns an error for a missing association parameter.
+func missingParameterError(association *saft.Assoc, param string) error {
+	return formatErrorWithPosition(association.Pos(), "missing parameter %q", param)
 }
 
+// decorateErrorWithSource prefixes err with the source name. A space is added
+// after the source name unless err already starts with a source position.
 func decorateErrorWithSource(err error, source string) error {
 	isDigit := func(c byte) bool {
 		return c >= '0' && c <= '9'

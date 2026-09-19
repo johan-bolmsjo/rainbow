@@ -60,7 +60,7 @@ func TestMatchResultEmptyLeadingGroup(t *testing.T) {
 	state := &filterState{}
 	state.match([]byte("y"), regexp.MustCompile(`(x)?(y)`), true)
 
-	if got, want := string(state.valueMatchResultN(0)), "\x00y"; got != want {
+	if got, want := string(state.valueMatchResult(0)), "\x00y"; got != want {
 		t.Fatalf("match result = %q, want %q", got, want)
 	}
 }
@@ -71,8 +71,8 @@ func TestMatchResultOutOfRangeIndex(t *testing.T) {
 	state := &filterState{}
 
 	for _, n := range []int{-1, 2} {
-		if got := string(state.valueMatchResultN(n)); got != "" {
-			t.Errorf("valueMatchResultN(%d) = %q, want empty", n, got)
+		if got := string(state.valueMatchResult(n)); got != "" {
+			t.Errorf("valueMatchResult(%d) = %q, want empty", n, got)
 		}
 	}
 }

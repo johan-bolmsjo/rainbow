@@ -5,16 +5,17 @@ import (
 	"strings"
 )
 
+// exception wraps an error thrown by the interpreter.
 type exception struct {
 	err error
 }
 
-// Throw exception in interpreter.
+// Throw throws an exception that can be caught by catch or catchAndDecorate.
 func Throw(err error) {
 	panic(&exception{err})
 }
 
-// Catch eny exception thrown when evaluating expression.
+// catch catches any exception thrown when evaluating an expression.
 // Example use: defer catch(&err)
 func catch(err *error) {
 	if x := recover(); x != nil {
@@ -26,7 +27,8 @@ func catch(err *error) {
 	}
 }
 
-// Same as catch but also decorate error using the supplied function.
+// catchAndDecorate catches an exception like catch and decorates the resulting
+// error using the supplied function.
 func catchAndDecorate(err *error, decorate func(err error) error) {
 	if x := recover(); x != nil {
 		if e, ok := x.(*exception); ok {
@@ -37,7 +39,7 @@ func catchAndDecorate(err *error, decorate func(err error) error) {
 	}
 }
 
-// Decorate any thrown excpetion using the specified function.
+// decorateException decorates any thrown exception using the supplied function.
 // Example: defer decorateException(...)
 func decorateException(decorate func(err error) error) {
 	if x := recover(); x != nil {
@@ -50,8 +52,8 @@ func decorateException(decorate func(err error) error) {
 	}
 }
 
-// ExceptInvalidNumberOfArgs is thrown on invalid number of arguments.
-func ExceptInvalidNumberOfArgs(args int, expected string) error {
+// ExceptionInvalidNumberOfArguments is thrown on invalid number of arguments.
+func ExceptionInvalidNumberOfArguments(args int, expected string) error {
 	if expected == "" {
 		return fmt.Errorf("invalid number of arguments: %d", args)
 	} else {
@@ -59,13 +61,13 @@ func ExceptInvalidNumberOfArgs(args int, expected string) error {
 	}
 }
 
-// ExceptTypeError is thrown on invalid arguments.
-func ExceptInvalidArgument(argNum int, reason string) error {
+// ExceptionInvalidArgument is thrown on an invalid argument.
+func ExceptionInvalidArgument(argNum int, reason string) error {
 	return fmt.Errorf("invalid argument: %d, %s", argNum, reason)
 }
 
-// ExceptTypeError is thrown on type errors.
-func ExceptTypeError(arg Object, argNum int, accepted ...Type) error {
+// ExceptionTypeError is thrown on type errors.
+func ExceptionTypeError(arg Object, argNum int, accepted ...Type) error {
 	var sb strings.Builder
 	for _, t := range accepted {
 		if sb.Len() > 0 {

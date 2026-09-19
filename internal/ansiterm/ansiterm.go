@@ -1,13 +1,13 @@
 package ansiterm
 
 import (
-	"github.com/johan-bolmsjo/errors"
 	"io"
 	"strconv"
+
+	"github.com/johan-bolmsjo/errors"
 )
 
-// ANSI terminal escape code.
-// See https://en.wikipedia.org/wiki/ANSI_escape_code
+// Code is an ANSI terminal escape code.
 type Code uint8
 
 const escapeSeq = "\x1b["
@@ -78,9 +78,12 @@ const (
 	CodeBGIWhite
 )
 
-// Write ANSI terminal codes to w.
+// WriteCodes writes ANSI terminal codes to w.
 func WriteCodes(w io.Writer, codes ...Code) error {
-	var codeBuf [4]byte
+	// maxCodeDigits is the maximum number of decimal digits in a Code value.
+	const maxCodeDigits = 3
+
+	var codeBuf [maxCodeDigits]byte
 
 	var es errors.Sink
 	write := func(b []byte) {

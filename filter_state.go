@@ -1,32 +1,43 @@
 package main
 
 import (
-	"github.com/johan-bolmsjo/rainbow/internal/igor"
 	"regexp"
 	"strings"
+
+	"github.com/johan-bolmsjo/rainbow/internal/igor"
 )
 
+// globalFilterState owns the state of every filter in a program so that it can
+// be reset between input lines.
 type globalFilterState struct {
 	l []*filterState
 }
 
+// clear clears the state of every filter.
 func (gfs *globalFilterState) clear() {
 	for _, v := range gfs.l {
 		v.clear()
 	}
 }
 
-func (gfs *globalFilterState) allocState() *filterState {
+// allocateState returns a new filter state tracked by the global state.
+func (gfs *globalFilterState) allocateState() *filterState {
 	fs := new(filterState)
 	gfs.l = append(gfs.l, fs)
 	return fs
 }
 
+// filterMatchHistorySize is the number of lines for which match results are kept: the
+// current line and the previously matched line.
+const filterMatchHistorySize = 2
+
+// filterState is the match state of a filter. It keeps the match result of the
+// current and the previously matched line.
 type filterState struct {
 	matched bool // Regexp matched current line
 
 	// Current and previously matched line.
-	hist [2]struct {
+	hist [filterMatchHistorySize]struct {
 		line []byte  // Line data
 		res  [][]int // Regexp match result
 	}
@@ -52,6 +63,8 @@ func (fs *filterState) match(line []byte, re *regexp.Regexp, updateMatched bool)
 	return hist.res
 }
 
+// clear prepares the state for the next line, keeping the current match as the
+// previous match when the line matched.
 func (fs *filterState) clear() {
 	if fs.matched {
 		fs.hist[1] = fs.hist[0]
@@ -61,11 +74,11 @@ func (fs *filterState) clear() {
 	fs.hist[0].res = nil
 }
 
-// valueMatchResultN returns the current or previously matched regexp result as
+// valueMatchResult returns the current or previously matched regexp result as
 // a string with each regexp group separated by a zero byte marker. Regexp
 // groups without a match are represented as no data but the zero marker added
 // between groups.
-func (fs *filterState) valueMatchResultN(n int) igor.ObjectString {
+func (fs *filterState) valueMatchResult(n int) igor.ObjectString {
 	if n < 0 || n >= len(fs.hist) {
 		return igor.ObjectString("")
 	}
