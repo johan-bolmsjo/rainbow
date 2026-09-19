@@ -43,11 +43,11 @@ type filterState struct {
 	}
 }
 
-// match matches a line against a regexp and updates the match result. The line
+// match matches a line against a regexp and caches the match result. The line
 // is saved for future use so it's assumed that each input line is uniquely
 // allocated and not modified. The filter state is cleared after each line of
 // input.
-func (fs *filterState) match(line []byte, re *regexp.Regexp, updateMatched bool) [][]int {
+func (fs *filterState) match(line []byte, re *regexp.Regexp) [][]int {
 	hist := &fs.hist[0]
 
 	if hist.res == nil {
@@ -56,17 +56,14 @@ func (fs *filterState) match(line []byte, re *regexp.Regexp, updateMatched bool)
 		}
 	}
 
-	if updateMatched && hist.res != nil {
-		fs.matched = true
-	}
-
 	return hist.res
 }
 
-// clear prepares the state for the next line, keeping the current match as the
-// previous match when the line matched.
+// clear prepares the state for the next line. The current result is kept as the
+// previous result whenever the regexp matched, also when the match was obtained
+// through another filter's regexpFrom reference.
 func (fs *filterState) clear() {
-	if fs.matched {
+	if fs.hist[0].res != nil {
 		fs.hist[1] = fs.hist[0]
 	}
 	fs.matched = false

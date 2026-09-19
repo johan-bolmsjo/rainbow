@@ -263,6 +263,41 @@ func TestRegexpFrom(t *testing.T) {
 	}
 }
 
+// TestRegexpFromMatchHistory verifies that a filter that is only referenced
+// through another filter's regexpFrom parameter records its match result as the
+// previous result for the next line.
+func TestRegexpFromMatchHistory(t *testing.T) {
+	const config = `{
+    filter: { name: base regexp: ` + "`(x)`" + ` }
+    filter: { name: derived regexpFrom: base properties: { 1: { color: red } } }
+    apply: { filters: derived }
+}`
+
+	tests := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"match is recorded as previous", []string{"x"}, "x"},
+		{"previous match is retained on mismatch", []string{"x", "y"}, "x"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prog, err := createProgram(strings.NewReader(config))
+			if err != nil {
+				t.Fatalf("createProgram: %v", err)
+			}
+			applyProgramLines(t, prog, tt.lines...)
+
+			base := prog.findFilter("base")
+			if got := string(base.state.valueMatchResult(1)); got != tt.want {
+				t.Errorf("previous match result = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestFilterOverlappingIntervals verifies that properties applied to an
 // interval that spans several existing segments are spliced into all of them.
 func TestFilterOverlappingIntervals(t *testing.T) {

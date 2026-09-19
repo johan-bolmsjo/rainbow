@@ -58,7 +58,7 @@ func TestPropertyGroupOutOfRange(t *testing.T) {
 // before an empty group that precedes a non-empty group.
 func TestMatchResultEmptyLeadingGroup(t *testing.T) {
 	state := &filterState{}
-	state.match([]byte("y"), regexp.MustCompile(`(x)?(y)`), true)
+	state.match([]byte("y"), regexp.MustCompile(`(x)?(y)`))
 
 	if got, want := string(state.valueMatchResult(0)), "\x00y"; got != want {
 		t.Fatalf("match result = %q, want %q", got, want)

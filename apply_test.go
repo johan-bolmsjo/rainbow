@@ -63,6 +63,61 @@ func TestApplyCondition(t *testing.T) {
 	}
 }
 
+// TestApplyConditionRegexpFromHistory verifies that the match history of a
+// filter that is only referenced through regexpFrom is promoted, so that a
+// condition can detect a changed match between the current and the previous
+// line.
+func TestApplyConditionRegexpFromHistory(t *testing.T) {
+	const config = `{
+    filter: { name: base regexp: ` + "`(word\\d)`" + ` }
+    filter: { name: derived regexpFrom: base }
+    filter: { name: highlight regexpFrom: base properties: { 1: { color: red } } }
+    apply: { filters: derived }
+    apply: {
+        cond: [not [equal? [filter-result base 0] [filter-result base 1]]]
+        filters: highlight
+    }
+}`
+
+	tests := []struct {
+		name  string
+		lines []string
+		text  string
+		want  color
+	}{
+		{"first match is highlighted", []string{"word1"}, "word1", colorRed},
+		{"repeated match is not highlighted", []string{"word1", "word1"}, "word1", colorNone},
+		{"changed match is highlighted", []string{"word1", "word2"}, "word2", colorRed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := applyConfiguration(t, config, tt.lines...).segmentContaining(t, tt.text)
+			if got.props.fgcolor != tt.want {
+				t.Errorf("segment %q has foreground color %s, want %s",
+					got.text, got.props.fgcolor, tt.want)
+			}
+		})
+	}
+}
+
+// TestApplyConditionRegexpFromMatchStatus verifies that filter-match? reports a
+// match for a filter that matched through its regexpFrom regexp.
+func TestApplyConditionRegexpFromMatchStatus(t *testing.T) {
+	const config = `{
+    filter: { name: base regexp: ` + "`(x)`" + ` }
+    filter: { name: derived regexpFrom: base }
+    filter: { name: highlight regexp: ` + "`(highlight)`" + ` properties: { 1: { color: red } } }
+    apply: { filters: derived }
+    apply: { cond: [filter-match? derived] filters: highlight }
+}`
+
+	got := applyConfiguration(t, config, "x highlight").segmentContaining(t, "highlight")
+	if got.props.fgcolor != colorRed {
+		t.Errorf("segment %q has foreground color %s, want red", got.text, got.props.fgcolor)
+	}
+}
+
 // TestApplyConditionErrors verifies that errors raised while evaluating an
 // apply condition are reported when a line is processed.
 func TestApplyConditionErrors(t *testing.T) {

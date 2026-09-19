@@ -103,9 +103,12 @@ func (l *line) applyProgram(prog *program) error {
 func (l *line) applyFilter(f *filter) {
 	var r [][]int
 	if f.regexp != nil {
-		r = f.state.match(l.text, f.regexp, true)
+		r = f.state.match(l.text, f.regexp)
 	} else if f.regexpFrom != nil {
-		r = f.regexpFrom.state.match(l.text, f.regexpFrom.regexp, false)
+		r = f.regexpFrom.state.match(l.text, f.regexpFrom.regexp)
+	}
+	if r != nil {
+		f.state.matched = true
 	}
 
 	applyToRegexpResult(r, func(group int, ival interval) {
