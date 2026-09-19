@@ -4,51 +4,61 @@ import (
 	"github.com/johan-bolmsjo/saft"
 )
 
-// Function is a function executable by the interpreter.
+// Function is a function executable by the interpreter. An eager function
+// receives fully evaluated arguments. A lazy function receives its unevaluated
+// arguments and controls when they are evaluated, which allows short-circuiting
+// functions such as and and or.
 type Function func(args []Object) Object
+
+// registeredFunction is an interpreter function together with how its arguments
+// are evaluated.
+type registeredFunction struct {
+	function Function
+	lazy     bool
+}
 
 // Interpreter is an interpreter instance.
 type Interpreter struct {
-	functions map[string]Function
+	functions map[string]registeredFunction
 }
 
 // NewInterpreter returns a new interpreter.
 func NewInterpreter() *Interpreter {
 	t := Interpreter{
-		functions: map[string]Function{},
+		functions: map[string]registeredFunction{},
 	}
 
 	// Register generic logical functions that do not rely on external state.
-	t.RegisterFunction("not", func(args []Object) Object {
+	t.RegisterEagerFunction("not", func(args []Object) Object {
 		if len(args) != 1 {
 			Throw(ExceptionInvalidNumberOfArguments(len(args), "1"))
 		}
 		return ObjectBool(!objectIsTrue(args[0]))
 	})
 
-	t.RegisterFunction("and", func(args []Object) Object {
+	t.RegisterLazyFunction("and", func(args []Object) Object {
 		result := Object(ObjectBool(true))
 		for _, arg := range args {
-			result = arg
-			if !objectIsTrue(arg) {
+			result = evaluateCallArgument(arg)
+			if !objectIsTrue(result) {
 				break
 			}
 		}
 		return result
 	})
 
-	t.RegisterFunction("or", func(args []Object) Object {
+	t.RegisterLazyFunction("or", func(args []Object) Object {
 		result := Object(ObjectBool(false))
 		for _, arg := range args {
-			result = arg
-			if objectIsTrue(arg) {
+			result = evaluateCallArgument(arg)
+			if objectIsTrue(result) {
 				break
 			}
 		}
 		return result
 	})
 
-	t.RegisterFunction("equal?", func(args []Object) Object {
+	t.RegisterEagerFunction("equal?", func(args []Object) Object {
 		if len(args) != 2 {
 			Throw(ExceptionInvalidNumberOfArguments(len(args), "2"))
 		}
@@ -58,14 +68,23 @@ func NewInterpreter() *Interpreter {
 	return &t
 }
 
-// RegisterFunction registers a function executable by the interpreter.
-func (p *Interpreter) RegisterFunction(name string, f Function) {
-	p.functions[name] = f
+// RegisterEagerFunction registers an eager function executable by the
+// interpreter. It receives fully evaluated arguments.
+func (p *Interpreter) RegisterEagerFunction(name string, f Function) {
+	p.functions[name] = registeredFunction{function: f}
 }
 
-// getFunction returns the function registered under name, or nil.
-func (p *Interpreter) getFunction(name string) Function {
-	return p.functions[name]
+// RegisterLazyFunction registers a lazy function executable by the interpreter.
+// It receives its unevaluated arguments.
+func (p *Interpreter) RegisterLazyFunction(name string, f Function) {
+	p.functions[name] = registeredFunction{function: f, lazy: true}
+}
+
+// getFunction returns the function registered under name and reports whether it
+// was found.
+func (p *Interpreter) getFunction(name string) (registeredFunction, bool) {
+	f, ok := p.functions[name]
+	return f, ok
 }
 
 // CompileCondition compiles a condition.
@@ -95,14 +114,16 @@ func (p *Interpreter) compile(elem saft.Elem) (*objectCall, error) {
 
 	functionName := str.V
 
+	registered, ok := p.getFunction(functionName)
+	if !ok {
+		return nil, formatErrorWithPosition(list.L[0].Pos(), "unknown function %q", functionName)
+	}
+
 	call := objectCall{
 		position: list.Pos(),
 		name:     functionName,
-		fun:      p.getFunction(functionName),
-	}
-
-	if call.fun == nil {
-		return nil, formatErrorWithPosition(list.L[0].Pos(), "unknown function %q", functionName)
+		fun:      registered.function,
+		lazy:     registered.lazy,
 	}
 
 	for _, arg := range list.L[1:] {

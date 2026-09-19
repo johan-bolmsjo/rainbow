@@ -11,6 +11,7 @@ type objectCall struct {
 	position saft.LexPos
 	name     string
 	fun      Function
+	lazy     bool
 	args     []Object
 }
 
@@ -19,16 +20,24 @@ func (call *objectCall) Type() Type {
 	return TypeCall
 }
 
+// evaluateCallArgument evaluates a function call argument. Nested function
+// calls are evaluated recursively while plain objects are returned as is.
+func evaluateCallArgument(arg Object) Object {
+	if call, ok := arg.(*objectCall); ok {
+		return call.evaluate()
+	}
+	return arg
+}
+
 // evaluate evaluates the arguments and invokes the function.
 func (call *objectCall) evaluate() Object {
+	if call.lazy {
+		return call.fun(call.args)
+	}
+
 	var args []Object
 	for _, arg := range call.args {
-		switch arg := arg.(type) {
-		case *objectCall:
-			args = append(args, arg.evaluate())
-		default:
-			args = append(args, arg)
-		}
+		args = append(args, evaluateCallArgument(arg))
 	}
 
 	defer decorateException(func(err error) error {

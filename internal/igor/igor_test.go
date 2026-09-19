@@ -61,6 +61,56 @@ func TestConditionEvaluate(t *testing.T) {
 	}
 }
 
+// TestConditionShortCircuit verifies that "and" and "or" do not evaluate
+// arguments after the result has been determined.
+func TestConditionShortCircuit(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   bool
+	}{
+		{"and skips non-determining argument", "[and [not true] [not]]", false},
+		{"or skips non-determining argument", "[or a [not]]", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := compileCondition(t, tt.source).Evaluate()
+			if err != nil {
+				t.Fatalf("Evaluate: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("Evaluate(%q) = %v, want %v", tt.source, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestConditionNonShortCircuit verifies that "and" and "or" evaluate a later
+// argument when no earlier argument has determined the result.
+func TestConditionNonShortCircuit(t *testing.T) {
+	tests := []struct {
+		name    string
+		source  string
+		wantErr string
+	}{
+		{"and evaluates non-determining argument", "[and a [not]]", "invalid number of arguments"},
+		{"or evaluates non-determining argument", "[or [not true] [not]]", "invalid number of arguments"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := compileCondition(t, tt.source).Evaluate()
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("error = %q, want it to contain %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // TestConditionNilEvaluate verifies that a missing condition evaluates to true.
 func TestConditionNilEvaluate(t *testing.T) {
 	var cond *Condition

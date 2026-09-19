@@ -67,7 +67,7 @@ func createProgram(reader io.Reader) (*program, error) {
 		interp: igor.NewInterpreter(),
 	}
 
-	prog.interp.RegisterFunction("filter-match?", func(args []igor.Object) igor.Object {
+	prog.interp.RegisterEagerFunction("filter-match?", func(args []igor.Object) igor.Object {
 		for i, arg := range args {
 			if str, ok := arg.(igor.ObjectString); ok {
 				filter := prog.findFilter(string(str))
@@ -84,7 +84,7 @@ func createProgram(reader io.Reader) (*program, error) {
 		return igor.ObjectBool(false)
 	})
 
-	prog.interp.RegisterFunction("filter-result", func(args []igor.Object) igor.Object {
+	prog.interp.RegisterEagerFunction("filter-result", func(args []igor.Object) igor.Object {
 		if len(args) != 2 {
 			igor.Throw(igor.ExceptionInvalidNumberOfArguments(len(args), "2"))
 		}
