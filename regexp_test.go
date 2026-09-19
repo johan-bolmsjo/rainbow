@@ -64,3 +64,15 @@ func TestMatchResultEmptyLeadingGroup(t *testing.T) {
 		t.Fatalf("match result = %q, want %q", got, want)
 	}
 }
+
+// TestMatchResultOutOfRangeIndex verifies that a match result for an out of
+// range index is reported as an empty string.
+func TestMatchResultOutOfRangeIndex(t *testing.T) {
+	state := &filterState{}
+
+	for _, n := range []int{-1, 2} {
+		if got := string(state.valueMatchResultN(n)); got != "" {
+			t.Errorf("valueMatchResultN(%d) = %q, want empty", n, got)
+		}
+	}
+}

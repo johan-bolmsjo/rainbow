@@ -5,16 +5,23 @@ See README.md for an overview.
 
 ## Rules of Engagement
 
-### Variable, types and function naming
+### Naming
 
-- Don't abbreviate names, except in small scopes such as loop variables.
+- Never abbreviate named (not anonymous) types or functions.
 
-### Code comment style
+### Comment style
 
-- Don't use abbreviations.
-- Document the current behavior:
-- Use self contained comments: don't refer to external documents or task instructions in comments.
-- Don't mention historical details or circumstances.
+- Never use abbreviations except exempted ones.
+- Use Go's comment style for types which leads with the function name or type that it applies to.
+- Document the current code behavior:
+- Use self contained comments: never refer to external documents or task instructions in comments.
+- Never mention historical details or circumstances.
+
+#### Exempt abbreviations in comments
+
+- e.g. (exempli gratia: for example)
+- i.e. (id est: that is)
+- API (application programming interface)
 
 ### Design methodologies
 
@@ -23,29 +30,10 @@ See README.md for an overview.
 - Keep code "DRY": Avoid excessive copy paste.
 - Avoid inline magic constants: give constant names to provide context.
 
-### Exempt abbreviations
+### Unit testing
 
-Local state in small scopes:
-- i, j, k (loop variables, indexes)
-- err (error)
-- k, v (key, value)
-- l (line)
-- n (counts)
-- re (compiled regexp)
-
-Math:
-- min (minimum)
-- max (maximum)
-
-Data management:
-- buf (buffer)
-- ctx (context)
-- dst (destination)
-- msg (message)
-- src (source)
-- str (string)
-
-Comments:
-- e.g. (exempli gratia: for example)
-- i.e. (id est: that is)
-- API (application programming interface)
+- Group tests by tested functionality.
+- Keep tests focused to a single property.
+- Use table driven tests for multiple inputs.
+- Minimize the number of tests needed for test coverage.
+- Comment each test function, explaining its purpose.
