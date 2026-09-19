@@ -47,7 +47,7 @@ func elementParseFilter(elem saft.Elem, prog *program) (*filter, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = associationCheckDuplicates(association, parFilterName, parFilterRegexp, parFilterRegexpFrom); err != nil {
+	if err = associationCheckDuplicates(association, parFilterName, parFilterRegexp, parFilterRegexpFrom, parFilterProperties); err != nil {
 		return nil, err
 	}
 	if err = associationCheckExclusive(association, parFilterRegexp, parFilterRegexpFrom); err != nil {
@@ -139,11 +139,16 @@ func elementParseFilterProperties(elem saft.Elem, param string, filter *filter) 
 		return err
 	}
 
+	seenGroup := map[int]bool{}
 	for _, p := range association.L {
 		var group int
 		if group, err = strconv.Atoi(p.K.V); err != nil || group <= 0 {
 			return formatErrorWithPosition(p.K.Pos(), "invalid regexp group %q", p.K.V)
 		}
+		if seenGroup[group] {
+			return formatErrorWithPosition(p.K.Pos(), "duplicate regexp group %q", p.K.V)
+		}
+		seenGroup[group] = true
 
 		var props properties
 		if props, err = elementParseProperties(p.V); err != nil {

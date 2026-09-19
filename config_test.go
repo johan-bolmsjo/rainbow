@@ -43,9 +43,11 @@ func TestCreateProgramErrors(t *testing.T) {
 		{"duplicate top level filter", `{filter: {name: f regexp: (a)} filter: {name: f regexp: (b)}}`, "duplicate filter"},
 
 		// Filter properties parameters.
+		{"duplicate properties parameter", `{filter: {name: f regexp: (x) properties: { 1: {color: red} } properties: { 1: {bgcolor: blue} }}}`, "duplicate parameter"},
 		{"properties not association list", `{filter: {name: f regexp: (x) properties: []}}`, "expected association list"},
 		{"property group zero", `{filter: {name: f regexp: (x) properties: { 0: {color: red} }}}`, "invalid regexp group"},
 		{"property group not numeric", `{filter: {name: f regexp: (x) properties: { x: {color: red} }}}`, "invalid regexp group"},
+		{"duplicate property group", `{filter: {name: f regexp: (x) properties: { 1: {color: red} 1: {color: blue} }}}`, "duplicate regexp group"},
 		{"property not association list", `{filter: {name: f regexp: (x) properties: { 1: [] }}}`, "expected association list"},
 		{"duplicate property", `{filter: {name: f regexp: (x) properties: { 1: {color: red color: blue} }}}`, "duplicate parameter"},
 		{"unknown property", `{filter: {name: f regexp: (x) properties: { 1: {bogus: red} }}}`, "unknown parameter"},
