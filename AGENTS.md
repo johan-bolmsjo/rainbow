@@ -41,7 +41,3 @@ See README.md for an overview.
 - Use table driven tests for multiple inputs.
 - Minimize the number of tests needed for test coverage.
 - Comment each test function, explaining its purpose.
-
-### Tooling
-
-- Use `go fmt` to format edited source code.

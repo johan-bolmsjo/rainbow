@@ -186,4 +186,77 @@ func TestProcessLogStream(t *testing.T) {
 			t.Errorf("error = %q, want it to wrap %q", err, readErr)
 		}
 	})
+
+	t.Run("apply condition error", func(t *testing.T) {
+		const errorConfig = `{
+    filter: { name: f regexp: (x) }
+    apply: { filters: f }
+    apply: { cond: [filter-result missing 0] filters: f }
+}`
+		prog, err := createProgram(strings.NewReader(errorConfig))
+		if err != nil {
+			t.Fatalf("createProgram: %v", err)
+		}
+
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+		err = processLogStream(strings.NewReader("x\n"), writer, prog, textEncoderDummy)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if !strings.Contains(err.Error(), "missing filter") {
+			t.Errorf("error = %q, want it to contain %q", err, "missing filter")
+		}
+	})
+
+	t.Run("output error", func(t *testing.T) {
+		outputErr := errors.New("output failure")
+		// A one byte buffer forces line.output to write through to the failing
+		// writer instead of buffering.
+		writer := bufio.NewWriterSize(&failAfterWriter{err: outputErr}, 1)
+		err := processLogStream(strings.NewReader("line\n"), writer, newProgram(t), textEncoderDummy)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if !errors.Is(err, outputErr) {
+			t.Errorf("error = %q, want it to wrap %q", err, outputErr)
+		}
+	})
+
+	t.Run("flush error", func(t *testing.T) {
+		flushErr := errors.New("flush failure")
+		// The default buffer holds the line until it is flushed explicitly.
+		writer := bufio.NewWriter(&failAfterWriter{err: flushErr})
+		err := processLogStream(strings.NewReader("line\n"), writer, newProgram(t), textEncoderDummy)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if !errors.Is(err, flushErr) {
+			t.Errorf("error = %q, want it to wrap %q", err, flushErr)
+		}
+	})
+}
+
+// TestUserConfigurationDirectory verifies that the configuration directory is
+// derived from $HOME and that a missing $HOME is reported as an error.
+func TestUserConfigurationDirectory(t *testing.T) {
+	t.Run("home set", func(t *testing.T) {
+		t.Setenv("HOME", "/home/tester")
+
+		dir, err := userConfigurationDirectory()
+		if err != nil {
+			t.Fatalf("userConfigurationDirectory: %v", err)
+		}
+		if want := "/home/tester/.config"; dir != want {
+			t.Errorf("directory = %q, want %q", dir, want)
+		}
+	})
+
+	t.Run("home not set", func(t *testing.T) {
+		t.Setenv("HOME", "")
+
+		if _, err := userConfigurationDirectory(); err == nil {
+			t.Error("expected an error")
+		}
+	})
 }

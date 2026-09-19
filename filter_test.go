@@ -181,6 +181,65 @@ func TestNestedFilters(t *testing.T) {
 	}
 }
 
+// TestUnnamedNestedFilters verifies that several nested filters without a name
+// can coexist and that applying the parent applies all of them. An empty name
+// must never be treated as a duplicate reference.
+func TestUnnamedNestedFilters(t *testing.T) {
+	const config = `{
+    filter: {
+        name: parent
+        regexp: (parent)
+        properties: { 1: { color: red } }
+        filter: { regexp: (one) properties: { 1: { color: green } } }
+        filter: { regexp: (two) properties: { 1: { color: blue } } }
+    }
+    apply: { filters: parent }
+}`
+
+	line := applyConfiguration(t, config, "parent one two")
+
+	tests := []struct {
+		text string
+		want color
+	}{
+		{"parent", colorRed},
+		{"one", colorGreen},
+		{"two", colorBlue},
+	}
+
+	for _, tt := range tests {
+		if got := line.segmentContaining(t, tt.text); got.props.fgcolor != tt.want {
+			t.Errorf("segment %q has foreground color %s, want %s", got.text, got.props.fgcolor, tt.want)
+		}
+	}
+}
+
+// TestMultipleRegexpMatches verifies that properties are applied to every
+// match of a regexp on the same line, not only the first one.
+func TestMultipleRegexpMatches(t *testing.T) {
+	const config = `{
+    filter: { name: word regexp: ` + "`(\\w+)`" + ` properties: { 1: { color: red } } }
+    apply: { filters: word }
+}`
+
+	line := applyConfiguration(t, config, "one two three")
+
+	tests := []struct {
+		text string
+		want color
+	}{
+		{"one", colorRed},
+		{"two", colorRed},
+		{"three", colorRed},
+	}
+
+	for _, tt := range tests {
+		if got := line.segmentContaining(t, tt.text); got.props.fgcolor != tt.want {
+			t.Errorf("segment %q has foreground color %s, want %s", got.text, got.props.fgcolor, tt.want)
+		}
+	}
+}
+
 // TestFilterNameReference verifies that a nested filter can be referenced by
 // its path using '/' as separator, both from an apply filters list and from a
 // condition evaluating filter-match?.
