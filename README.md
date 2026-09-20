@@ -18,17 +18,18 @@ A custom configuration is quickly created to troubleshoot particular issues.
 
 ## Usage
 
-Configuration files are searched for in `~/.config/rainbow/` with the suffix
-`.rainbow` automatically added. e.g. the command `rainbow example` would try to
-load the config file `~/.config/rainbow/example.rainbow`. Alternatively a full
-path to a config file can be specified using the `-config` flag.
+Configuration files are searched for in `<USER_CONFIG_DIR>/rainbow/` (on Linux
+this is under `~/.config/`) with the suffix `.rainbow` automatically added. e.g.
+the command `rainbow example` would try to load the configuration file
+`~/.config/rainbow/example.rainbow`. Alternatively a full path to a
+configuration file can be specified using the `-config` flag.
 
 ### Command-line Flags
 
     -help         Show help
     -color        Force color for non-TTY output
-    -config FILE  Use config FILE
-    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow
+    -config FILE  Use configuration FILE
+    CONFIG        Use configuration from <USER_CONFIG_DIR>/rainbow/CONFIG.rainbow
 
 ### Example Usage
 

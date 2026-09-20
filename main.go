@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 
@@ -19,6 +19,7 @@ var (
 	colorOutputEnabled = os.Getenv("TERM") != "dumb" &&
 		(isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()))
 
+	programName  = filepath.Base(os.Args[0])
 	outputStream = io.Writer(os.Stdout)
 	errorStream  = os.Stderr
 )
@@ -39,8 +40,7 @@ func main() {
 		if configFile == "" {
 			configFile = s
 		} else {
-			briefUsage()
-			exitFail()
+			fatalf("configuration file specified twice: %q, %q\n", configFile, s)
 		}
 	}
 
@@ -56,30 +56,31 @@ func main() {
 					colorOutputEnabled = true
 				case "-config":
 					configState = true
-				case "-help", "--help" /* GNU concession */ :
-					detailedUsage()
+				case "-h", "-help", "--help" /* GNU concession */ :
+					usage(outputStream)
 					exitSuccess()
 				default:
-					detailedUsage()
-					exitFail()
+					fatalf("unknown command line flag %q\n", arg)
 				}
 			} else {
-				configDir, err := userConfigurationDirectory()
+				configPath, err := userConfigurationFilePath(arg)
 				if err != nil {
-					fatalf("unable to find user config directory: %s\n", err)
+					fatalf("unable to resolve file path for configuration %q: %s\n", arg, err)
 				}
-				setConfigFile(configDir + "/rainbow/" + arg + ".rainbow")
+				setConfigFile(configPath)
 			}
 		}
 	}
 
-	if configState || configFile == "" {
-		briefUsage()
-		exitFail()
+	if configState {
+		fatalln("missing -config argument")
+	}
+	if configFile == "" {
+		fatalln("no configuration file specified")
 	}
 
 	if cpuProfileEnabled {
-		f, err := os.Create("rainbow-cpu.pprof")
+		f, err := os.Create(fmt.Sprintf("%s-cpu.pprof", programName))
 		if err == nil {
 			pprof.StartCPUProfile(f)
 			defer pprof.StopCPUProfile()
@@ -89,7 +90,7 @@ func main() {
 
 	prog, err := loadProgram(configFile)
 	if err != nil {
-		fatalf("failed to read config: %s\n", err)
+		fatalf("failed to read configuration: %s\n", err)
 	}
 
 	encoder := textEncoderDummy
@@ -137,47 +138,38 @@ func processLogStream(reader io.Reader, writer *bufio.Writer, prog *program, enc
 	return nil
 }
 
-// detailedUsage writes a full usage description to the error stream.
-func detailedUsage() {
-	errorStream.Write([]byte(`Rainbow is a log file colorer that acts as a stream processor. Match and action
-rules are applied according to configuration to each line read from stdin,
-outputting them to stdout.
-
-`))
-	briefUsage()
-}
-
-// briefUsage writes a short usage description to the error stream.
-func briefUsage() {
-	errorStream.Write([]byte(`Usage:
-
-    -help         Show help
-    -color        Force color for non-TTY output
-    -config FILE  Use config FILE
-    CONFIG        Use config from ~/.config/rainbow/CONFIG.rainbow
-
-Example:
-
-    rainbow config < logfile
-`))
-}
-
-// userConfigurationDirectory returns the directory that holds user configuration files.
-//
-// TODO(jb): Support for other platforms than Linux. The lookup is Linux
-// specific and assumes that HOME points at the user's home directory.
-func userConfigurationDirectory() (string, error) {
-	var dir string
-
-	switch runtime.GOOS {
-	default:
-		dir = os.Getenv("HOME")
-		if dir == "" {
-			return "", errors.New("$HOME is not defined")
-		}
-		dir += "/.config"
+// userConfigurationFilePath returns the path of the named user configuration file.
+func userConfigurationFilePath(name string) (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
 	}
-	return dir, nil
+	return filepath.Join(dir, "rainbow", name+".rainbow"), nil
+}
+
+// usage outputs the program usage message to w.
+func usage(w io.Writer) {
+	configPath := "<config-dir>/rainbow/CONFIG.rainbow"
+	if path, err := userConfigurationFilePath("CONFIG"); err == nil {
+		configPath = path
+	}
+
+	fmt.Fprintf(w, `Rainbow is a log file colorer that acts as a stream processor. Match and
+action rules are applied according to configuration to each line read
+from stdin, outputting them to stdout.
+
+USAGE:
+  %s [OPTIONS]
+
+OPTIONS:
+  -h, -help     Show help message
+  -color        Force color for non-TTY output
+  -config FILE  Use configuration FILE
+  CONFIG        Use configuration from %s
+
+EXAMPLE:
+  %s CONFIG < logfile
+`, programName, configPath, programName)
 }
 
 // fatalf writes a formatted error to the error stream and exits with failure.

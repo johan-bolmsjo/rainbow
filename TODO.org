@@ -1,7 +1,0 @@
-* Testing
-
-* Code
-
-** TODO Config file location is Linux centric
-
-Add support for other platforms (main.go)

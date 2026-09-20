@@ -236,27 +236,3 @@ func TestProcessLogStream(t *testing.T) {
 		}
 	})
 }
-
-// TestUserConfigurationDirectory verifies that the configuration directory is
-// derived from $HOME and that a missing $HOME is reported as an error.
-func TestUserConfigurationDirectory(t *testing.T) {
-	t.Run("home set", func(t *testing.T) {
-		t.Setenv("HOME", "/home/tester")
-
-		dir, err := userConfigurationDirectory()
-		if err != nil {
-			t.Fatalf("userConfigurationDirectory: %v", err)
-		}
-		if want := "/home/tester/.config"; dir != want {
-			t.Errorf("directory = %q, want %q", dir, want)
-		}
-	})
-
-	t.Run("home not set", func(t *testing.T) {
-		t.Setenv("HOME", "")
-
-		if _, err := userConfigurationDirectory(); err == nil {
-			t.Error("expected an error")
-		}
-	})
-}
